@@ -1,0 +1,3 @@
+-r requirements.txt
+gradio==6.30.0
+# torch and torchvision are pinned when Deliverable 2 training starts.
