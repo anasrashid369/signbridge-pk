@@ -1,103 +1,95 @@
 # SignBridge PK
 
-Real-time Pakistan Sign Language (PSL) alphabet recognizer using computer vision and deep learning.
+A real-time recognizer for the static letters of the Pakistan Sign Language (PSL) alphabet, built with computer vision and machine learning.
 
-## Overview
+## Problem
 
-SignBridge PK is a web-based application that recognizes static hand gestures representing letters of the Pakistan Sign Language alphabet. The system uses MediaPipe for hand landmark detection and combines classical ML and deep learning models for classification.
+This project recognizes individual letter signs of the Pakistan Sign Language alphabet from webcam images. It scopes the problem to static letter signs and builds a dataset, features, and models for that task. Motion-based signs and full sentences are out of scope.
 
-**Status:** Development Phase 1 (Problem Definition & Data Acquisition)
+## Status
 
-## Tech Stack
+Deliverable 1 (Problem Definition and Data Acquisition) is in progress. The web app and models arrive in later deliverables.
 
-- **Python 3.11**
-- **PyTorch** — neural network training and inference
-- **MediaPipe** — hand landmark detection
-- **OpenCV** — image processing
-- **Gradio** — web interface
-- **scikit-learn** — classical ML baselines (Random Forest, SVM)
-
-## Project Structure
+## Repository Layout
 
 ```
 signbridge-pk/
-├── app/                          # Gradio web interface
-├── configs/                       # YAML configs for training, paths
-├── data/
-│   └── processed/               # Processed dataset (not in Git)
-├── models/                        # Trained model checkpoints
-├── reports/                       # Metrics, figures, bias analysis
-├── scripts/                       # Data collection, download, training scripts
-├── src/signbridge/
-│   ├── data/                     # Dataset loading, augmentation
-│   ├── features/                 # Landmark extraction, normalization
-│   ├── inference/                # Prediction wrapper
-│   ├── models/                   # Model architectures
-│   └── evaluation/               # Metrics, bias analysis
-├── tests/                         # pytest test suite
+├── data_scripts/          # All Phase 2 code: collect/, clean/, features/, eda/, download_data.py
+├── src/signbridge/        # Reusable library code (config loader, features, models, inference)
+├── configs/               # YAML settings: paths, thresholds, seeds
+├── tests/                 # pytest suite
 ├── docs/
-│   ├── proposal/                 # LaTeX proposal
-│   └── report/                   # LaTeX final report
-├── README.md
-├── requirements.txt
-├── pyproject.toml
-└── .github/workflows/ci.yml      # GitHub Actions CI/CD
+│   ├── proposal/          # LaTeX proposal
+│   └── report/            # LaTeX final report
+├── reports/               # Metrics, figures, bias analysis outputs
+├── data/
+│   ├── raw/               # Downloaded or collected images (not in Git)
+│   ├── interim/           # Intermediate files (not in Git)
+│   └── processed/         # manifest.csv and label_map.json are tracked; the rest is not
+├── models/                # Model checkpoints (weights not in Git)
+├── notebooks/             # Exploration only; imports from src/
+├── requirements.txt       # Runtime dependencies for Deliverable 1
+├── requirements-dev.txt   # Test and lint tools
+├── requirements-ml.txt    # Model training and app dependencies (later deliverables)
+└── pyproject.toml         # Project metadata and tool configuration
 ```
+
+Phase 2 entry-point scripts live in `data_scripts/`. The shared loader in `src/signbridge/config.py` is a library module, so it stays under `src/`.
 
 ## Setup
 
-### Prerequisites
-- Python 3.11 or later
-- pip
-
-### Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/anasrashid369/signbridge-pk.git
-cd signbridge-pk
-```
-
-2. Create and activate a virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-## Running the App
+Requires Python 3.11.
 
 ```bash
-python app/app.py
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements-dev.txt
+pip install -e .
 ```
 
-The app will launch on `http://localhost:7860` by default.
+`requirements-dev.txt` includes the runtime dependencies plus pytest and ruff. `pip install -e .` makes the `signbridge` package importable from the scripts.
 
-## Project Phases
+Check the setup:
 
-- **Phase 1:** Problem Definition
-- **Phase 2:** Data Acquisition & Setup
-- **Phase 3:** Model Implementation & Training
-- **Phase 4:** Evaluation & Comparative Analysis
-- **Phase 5:** Output (web app)
-- **Phase 6:** Documentation & Final Report
+```bash
+pytest
+ruff check .
+```
+
+## Data
+
+- **Base dataset (ASL, baseline only):** [ASL Alphabet](https://www.kaggle.com/datasets/grassknoted/asl-alphabet) (`grassknoted/asl-alphabet`) on Kaggle, licensed GPL 2. It has 87,000 training images of 200x200 pixels in 29 classes (A-Z, SPACE, DELETE, NOTHING). It is used only as a baseline; it is American Sign Language, not PSL. Downloaded by `data_scripts/download_data.py`.
+- **PSL dataset:** collected by the team from consenting volunteers. It is not in Git. Its hosting link will be added here when published.
+
+Raw images are never committed. Only `data/processed/manifest.csv` and `data/processed/label_map.json` are tracked.
+
+## Running the Data Scripts
+
+Run every script from the repository root. Settings (paths, dataset slug, thresholds, seed) come from `configs/data.yaml`, and every script accepts `--help`.
+
+### Download the ASL baseline dataset
+
+Needs a Kaggle account. Authenticate once with `kaggle auth login`, or set the `KAGGLE_API_TOKEN` environment variable to a token from your Kaggle account settings.
+
+```bash
+python data_scripts/download_data.py --dry-run   # show the dataset and destination, download nothing
+python data_scripts/download_data.py             # download into data/raw/asl_alphabet
+```
+
+Options: `--dataset owner/name` overrides the Kaggle slug, `--dest PATH` overrides the download folder, and `--config PATH` uses a different config file. After the download, the script logs where to place the team's PSL images (`data/raw/psl`).
+
+## Coming in Later Deliverables
+
+- Feature extraction, classifiers and MobileNetV2 training (Deliverable 2)
+- Gradio web app for webcam capture, top-3 predictions and landmark overlay (Deliverable 3)
 
 ## Team
 
-- **Aliza** — Data Lead
-- **Fatima** — Model Lead
-- **Anas** — App & DevOps Lead
-
-## License
-
-TBD
+- **Aliza**: Data lead (collection, cleaning, bias analysis)
+- **Fatima**: Model lead (features, training, evaluation)
+- **Anas**: App and DevOps lead (repository, CI, download script, app, report assembly)
 
 ## Notes
 
-- This project focuses on static letter recognition only.
+- Scope is static letter signs only.
 - Deployment is excluded; the app runs locally.
-- Raw dataset images and large model files are not stored in Git.
