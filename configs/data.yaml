@@ -1,0 +1,25 @@
+# Shared settings for all Phase 2 data scripts.
+# Paths are relative to the repository root. Tell the team before renaming or removing a key.
+
+seed: 42                                  # random seed for splits, sampling and augmentation
+
+paths:
+  raw_dir: data/raw                       # all downloaded and collected images (not in Git)
+  asl_raw_dir: data/raw/asl_alphabet      # ASL baseline dataset after download
+  psl_raw_dir: data/raw/psl               # team-collected PSL images (layout set by the collection protocol)
+  interim_dir: data/interim               # intermediate outputs such as cleaned copies (not in Git)
+  processed_dir: data/processed           # tracked outputs: manifest and label map
+  manifest: data/processed/manifest.csv   # one row per image: path, label, person_id, split, ...
+  label_map: data/processed/label_map.json  # letter to class index
+  figures_dir: reports/figures            # EDA charts used in the report
+
+dataset:
+  kaggle_slug: grassknoted/asl-alphabet   # ASL baseline data from Kaggle, not PSL
+
+image:
+  size: 224                               # side length in pixels after resizing (MobileNetV2 input size)
+
+quality:                                  # starting values, to be tuned from EDA on our own images
+  blur_threshold: 100.0                   # minimum variance of the Laplacian; below this an image counts as blurry
+  brightness_min: 40                      # minimum mean grayscale value (0-255); darker images are flagged
+  brightness_max: 220                     # maximum mean grayscale value (0-255); brighter images are flagged
