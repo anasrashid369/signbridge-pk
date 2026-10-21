@@ -1,0 +1,70 @@
+\section{Challenges Faced}
+\label{sec:challenges}
+
+This section records problems the team actually ran into while setting up the repository and the data pipeline for Deliverable 1, how each was handled, and what we took from it.
+
+\subsection{Ignore Rules Blocked Files We Needed}
+
+\textbf{What happened.} The first \texttt{.gitignore} ignored every \texttt{.csv} file, every notebook, the whole \texttt{data/processed/} folder and the whole \texttt{models/} folder. This would have blocked the files the team had agreed to commit, such as \texttt{manifest.csv}, \texttt{label\_map.json} and the exploration notebooks. It also meant that the placeholder files keeping \texttt{data/processed/}, \texttt{models/} and \texttt{src/signbridge/models/} in the repository were never committed.
+
+\textbf{How we fixed it.} We replaced the blanket rules with a narrower policy: raw and intermediate data are ignored, \texttt{data/processed/} is ignored except for the manifest, the label map and its placeholder, and model weights are ignored by file extension instead of by folder. We checked each rule with \texttt{git check-ignore} on test files before committing, and committed the missing placeholders separately.
+
+\textbf{What we learned.} Ignore rules decide what the project can share, so they need testing like code. Ignoring a folder also hides everything inside it, including files that should be tracked.
+
+\subsection{Committing More Than Intended}
+
+\textbf{What happened.} The first commit staged everything in the folder at once. Two team planning PDFs were committed to the public repository as a result.
+
+\textbf{How we fixed it.} The PDFs were removed from tracking and kept locally. From then on, every commit lists its files explicitly.
+
+\textbf{What we learned.} Staging files by name keeps each commit to one intended change and avoids publishing files by accident.
+
+\subsection{Documentation Ahead of the Code}
+
+\textbf{What happened.} The first README told readers to start a web app with \texttt{python app/app.py} on port 7860. No app existed yet.
+
+\textbf{How we fixed it.} We rewrote the README to describe only what exists: the problem, the folder layout, setup steps and the scripts that are present. Planned features are listed separately under ``Coming in Later Deliverables''. The rewrite was committed only after the scripts it describes were on the main branch.
+
+\textbf{What we learned.} Documentation should change in step with the code. Instructions that do not work cost a reader more time than missing instructions.
+
+\subsection{Outdated Linter Configuration}
+
+\textbf{What happened.} Our \texttt{ruff} settings placed the rule selection at the top level of \texttt{pyproject.toml}, a layout that current \texttt{ruff} versions have moved under a separate \texttt{lint} section.
+
+\textbf{How we fixed it.} We moved the rule selection under \texttt{[tool.ruff.lint]}, kept the line length at the top level, and confirmed that \texttt{ruff} ran without a deprecation warning.
+
+\subsection{A Slow and Misleading CI Pipeline}
+
+\textbf{What happened.} The first continuous integration (CI) run installed every dependency, including large packages that Deliverable 1 does not use. It took 1 minute 38 seconds and failed, because no tests existed yet and \texttt{pytest} treats ``no tests collected'' as a failure.
+
+\textbf{How we fixed it.} We split the dependencies into three files: one for the Deliverable 1 runtime, one for test and lint tools, and one for packages needed only in later deliverables. CI installs only the first two and caches downloaded packages between runs. We also added a first test that imports the package. The next CI runs passed in 36 to 43 seconds.
+
+\textbf{What we learned.} A passing pipeline only means something if it runs real checks, and CI should install what the current stage needs, not everything the project will ever use.
+
+\subsection{OpenCV and MediaPipe Conflict}
+
+\textbf{What happened.} MediaPipe depends on the \texttt{opencv-contrib-python} package. Listing a second OpenCV package, such as \texttt{opencv-python-headless}, would install two packages that both provide the same \texttt{cv2} module.
+
+\textbf{How we fixed it.} We installed the planned dependencies in a clean Python 3.11 environment, confirmed with \texttt{pip check} that there were no broken requirements and that both \texttt{cv2} and \texttt{mediapipe} imported, and kept \texttt{opencv-contrib-python} as the only OpenCV package. Versions were pinned from that tested environment, then reinstalled from the pinned files into a second clean environment to confirm them.
+
+\textbf{What we learned.} Library choices interact through their own dependencies, so they should be tested together in a clean environment instead of assumed to fit.
+
+\subsection{Side Effects from the Kaggle Library}
+
+\textbf{What happened.} Importing the \texttt{kaggle} Python library starts its authentication step and prints login instructions, even when no download is requested.
+
+\textbf{How we fixed it.} The download script imports the library only inside the function that performs the download. Showing the help text, a dry run and the automated tests therefore never trigger authentication.
+
+\subsection{The Available Dataset Is ASL, Not PSL}
+
+\textbf{What happened.} The large labelled alphabet dataset available for download is an American Sign Language dataset~\cite{asl_alphabet_kaggle}, while this project targets Pakistan Sign Language.
+
+\textbf{How we handled it.} The ASL data is labelled as baseline data everywhere it appears (configuration, scripts, README) and is used only to build and test the pipeline. PSL images are to be collected by the team from consenting volunteers.
+
+\textbf{Still open.} Whether the PSL data uses the Latin A--Z manual alphabet or signs for Urdu letters is not yet decided. The current label map assumes A--Z.
+
+\subsection{Class Names That Do Not Match}
+
+\textbf{What happened.} After downloading the ASL dataset we found that its three extra classes are stored in folders named \texttt{del}, \texttt{nothing} and \texttt{space}, while the label encoding uses \texttt{DELETE}, \texttt{NOTHING} and \texttt{SPACE}. Encoding a folder name directly would fail for these three classes.
+
+\textbf{Still open.} The team still has to decide whether the names are mapped when the manifest is built or whether the label encoding changes to match the folders.
