@@ -13,6 +13,7 @@ paths:
   label_map: data/processed/label_map.json  # letter to class index
   figures_dir: reports/figures            # EDA charts used in the report
 
+  hand_model: models/hand_landmarker.task  # MediaPipe hand landmarker model file (downloaded separately, not in Git)
 dataset:
   kaggle_slug: grassknoted/asl-alphabet   # ASL baseline data from Kaggle, not PSL
 
