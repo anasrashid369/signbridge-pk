@@ -1,0 +1,30 @@
+\section{Problem Statement}
+\label{sec:problem}
+
+\subsection{The Communication Barrier}
+
+People who communicate in Pakistan Sign Language (PSL) and people who do not know it often have no shared language. In everyday settings such as a classroom, a shop, a clinic or a family gathering, a conversation between a signer and a non-signer usually depends on a human interpreter, on writing things down, or on improvised gestures. Interpreters are not always available. Writing is slow and depends on both people sharing a written language. Gestures break down as soon as the message becomes specific, for example a person's name or an address.
+
+The burden of bridging this gap often falls on the signer. Non-signers who want to meet them halfway, such as relatives, classmates and teachers, need a way to learn and practise signs, and to check whether they are reading or producing a sign correctly.
+
+\todobox{Add a sourced figure for the size of the deaf and hard-of-hearing population in Pakistan, and for how many people use PSL. Needed source: a national disability survey or census report, or a report from a recognised deaf association in Pakistan. Add it to \texttt{references.bib} in place of the \texttt{todo\_population} entry.~\cite{todo_population}}
+
+\subsection{Fewer Tools for PSL than for ASL}
+
+Much of the publicly available work on sign language recognition, including datasets and ready-made recognition tools, appears to focus on American Sign Language (ASL) (source needed; see the box below). This project shows the effect directly: the large, labelled alphabet dataset we could download for a baseline is an ASL dataset~\cite{asl_alphabet_kaggle}, not a PSL one. A model trained only on ASL cannot be used for PSL, because the two are different sign languages with different signs.
+
+\todobox{Support the comparison between PSL and ASL resources with a source, for example a published survey of sign language datasets or of PSL recognition work. Do not state counts of datasets or tools without that source. Replace the \texttt{todo\_psl\_resources} entry in \texttt{references.bib}.~\cite{todo_psl_resources}}
+
+\subsection{Why Start with Letters}
+
+Fingerspelling, signing a word letter by letter, is commonly used for names, places and words that do not have an established sign (source needed; see the box below). A tool that recognises individual letters therefore helps exactly in the situations where improvised gestures fail.
+
+\todobox{Cite a PSL-specific source confirming how fingerspelling is used in PSL (names, unknown words). Replace the \texttt{todo\_fingerspelling} entry in \texttt{references.bib}.~\cite{todo_fingerspelling}}
+
+Letters are also a sensible first step for a technical reason. Each static letter is a single hand shape that can be captured in one image, the set of classes is small and fixed, and every prediction can be checked against a known answer. Recognising words, sentences or signs that involve movement needs sequences of frames and a much larger dataset, which is outside what one course project can build and evaluate properly.
+
+\subsection{Scope}
+
+This project covers \textbf{static letter signs only}. The system receives a single image of one hand and returns the most likely letters with their confidence. It does not recognise motion-based signs, words or sentences, and it does not translate speech or text into signs.
+
+\todobox{Confirm which letter set the PSL data uses (Latin A--Z manual alphabet or signs for Urdu letters) and state it here. The current label map uses Latin A--Z. This is an open team decision (Aliza and Fatima).}
