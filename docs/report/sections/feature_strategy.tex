@@ -1,0 +1,34 @@
+\section{Feature Strategy}
+\label{sec:feature-strategy}
+
+The project prepares two feature sets from each image, plus a numeric encoding of the labels. The code is in \texttt{data\_scripts/features/}.
+
+\subsection{Hand Landmark Features}
+
+MediaPipe Hands detects 21 landmarks on a hand, each with $x$, $y$ and $z$ coordinates. The function in \texttt{landmarks.py} normalises one hand in two steps:
+\begin{enumerate}
+  \item \textbf{Translation:} the wrist (landmark 0) is subtracted from every landmark, so the wrist becomes the origin and the hand's position in the image no longer matters.
+  \item \textbf{Scaling:} every coordinate is divided by the hand size, defined as the distance from the wrist to the base of the middle finger (landmark 9), computed over $x$, $y$ and $z$. The hand's size in the image, and so its distance from the camera, no longer matters.
+\end{enumerate}
+The result is flattened into a vector of 63 values (21 landmarks $\times$ 3 coordinates). The function rejects inputs of the wrong shape and hands whose size is zero. Tests check that shifting or scaling a hand leaves its features unchanged.
+
+\subsection{Image Features}
+
+For the image-based model, \texttt{images.py} converts each image to RGB, resizes it to $s \times s$ pixels, where $s$ is \texttt{image.size} in \texttt{configs/data.yaml} (currently 224), and scales pixel values from 0--255 to 0--1 as 32-bit floats.
+
+\subsection{Label Encoding}
+
+\texttt{labels.py} maps each class name to an integer index: A to Z become 0 to 25. With the \texttt{-{}-include-special} option, the three extra ASL classes follow as 26 to 28, so letter indices stay the same either way. The mapping is saved as \texttt{data/processed/label\_map.json}, which is committed so every script and model uses the same indices. The committed file contains the 26 letters only.
+
+\todobox{\textbf{Owner: Fatima.} Review the description above and add:
+\begin{itemize}[leftmargin=1.5em, topsep=2pt]
+  \item Why these normalisation steps were chosen, and why the hand size uses $z$ as well as $x$ and $y$.
+  \item Whether the features should also be rotation-invariant, given that some letters may differ mainly in orientation.
+  \item How left hands are handled (open team question: mirror to right hand, train on both, or restrict collection).
+  \item What happens with missing or invalid landmark values (non-finite values currently pass through).
+  \item Why integer indices were chosen for the labels, and where one-hot encoding is used if at all.
+  \item Whether the label map should use the dataset folder names (\texttt{del}, \texttt{nothing}, \texttt{space}) or a mapping step.
+  \item Feature EDA figure: \texttt{reports/figures/landmark\_feature\_pca.png} (2D projection of normalised landmark vectors, coloured by letter), if produced.
+\end{itemize}}
+
+\safefigure{landmark_feature_pca.png}{Normalised landmark feature vectors projected to two dimensions, coloured by letter.}{fig:landmark-pca}
