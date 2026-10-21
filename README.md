@@ -87,7 +87,7 @@ Options: `--dataset owner/name` overrides the Kaggle slug, `--dest PATH` overrid
 
 - **Aliza**: Data lead (collection, cleaning, bias analysis)
 - **Fatima**: Model lead (features, training, evaluation)
-- **Anas**: App and DevOps lead (repository, CI, download script, app, report assembly)
+- **Anas**: App and Integration lead (repository, CI, download script, app, report assembly)
 
 ## Notes
 
