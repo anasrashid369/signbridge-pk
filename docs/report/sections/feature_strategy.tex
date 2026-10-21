@@ -3,9 +3,20 @@
 
 The project prepares two feature sets from each image, plus a numeric encoding of the labels. The code is in \texttt{data\_scripts/features/}.
 
-\subsection{Hand Landmark Features}
+\subsection{Hand Landmark Extraction}
 
-MediaPipe Hands detects 21 landmarks on a hand, each with $x$, $y$ and $z$ coordinates. The function in \texttt{landmarks.py} normalises one hand in two steps:
+\texttt{extract.py} turns images into landmark feature vectors. It uses the MediaPipe hand landmarker in single-image mode, limited to one hand per image. The model file is set by \texttt{paths.hand\_model} in \texttt{configs/data.yaml}; it is downloaded separately and kept out of Git.
+
+\begin{enumerate}
+  \item \textbf{Finding images:} images (\texttt{.jpg}, \texttt{.jpeg}, \texttt{.png}) are labelled by the name of their folder, converted to upper case. Folders whose name is not in the label map are skipped and counted. By default the script takes a random sample of 50 images per class, using \texttt{seed} from the configuration so the sample is the same on every run; the sample size can be changed on the command line, with 0 meaning all images.
+  \item \textbf{Detecting the hand:} for each image the landmarker returns the 21 landmarks of the detected hand, or nothing if no hand is found. Unreadable images are logged and skipped.
+  \item \textbf{Normalising:} the landmarks of each detected hand are normalised as described below, giving 63 values.
+  \item \textbf{Caching:} the vectors, their class indices and the image paths are saved together in \texttt{landmark\_features.npz}, and one row per image (path, label, whether a hand was detected) is saved in \texttt{landmark\_detections.csv}. Both files go to \texttt{paths.processed\_dir} and are not committed.
+\end{enumerate}
+
+\subsection{Hand Landmark Normalisation}
+
+Each landmark has $x$, $y$ and $z$ coordinates. The function in \texttt{landmarks.py} normalises one hand in two steps:
 \begin{enumerate}
   \item \textbf{Translation:} the wrist (landmark 0) is subtracted from every landmark, so the wrist becomes the origin and the hand's position in the image no longer matters.
   \item \textbf{Scaling:} every coordinate is divided by the hand size, defined as the distance from the wrist to the base of the middle finger (landmark 9), computed over $x$, $y$ and $z$. The hand's size in the image, and so its distance from the camera, no longer matters.
@@ -27,8 +38,12 @@ For the image-based model, \texttt{images.py} converts each image to RGB, resize
   \item How left hands are handled (open team question: mirror to right hand, train on both, or restrict collection).
   \item What happens with missing or invalid landmark values (non-finite values currently pass through).
   \item Why integer indices were chosen for the labels, and where one-hot encoding is used if at all.
-  \item Whether the label map should use the dataset folder names (\texttt{del}, \texttt{nothing}, \texttt{space}) or a mapping step.
+  \item Whether the label map should use the dataset folder names (\texttt{del}, \texttt{nothing}, \texttt{space}) or a mapping step. With the committed 26-letter map, extraction skips all three classes; with \texttt{-{}-include-special}, \texttt{nothing} and \texttt{space} match after upper-casing but \texttt{del} (\texttt{DEL}) still does not match \texttt{DELETE}.
+  \item Hand detection results: run the extraction and report how many images had a detected hand, per class, from \texttt{landmark\_detections.csv} (real counts only). Figure: \texttt{reports/figures/landmark\_detection\_rate.png}.
+  \item Why a sample of 50 images per class was chosen for extraction, and whether the full dataset will be used later.
   \item Feature EDA figure: \texttt{reports/figures/landmark\_feature\_pca.png} (2D projection of normalised landmark vectors, coloured by letter), if produced.
 \end{itemize}}
+
+\safefigure{landmark_detection_rate.png}{Share of images in which a hand was detected, per class.}{fig:detection-rate}
 
 \safefigure{landmark_feature_pca.png}{Normalised landmark feature vectors projected to two dimensions, coloured by letter.}{fig:landmark-pca}
