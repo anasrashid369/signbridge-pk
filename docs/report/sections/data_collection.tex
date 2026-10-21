@@ -1,0 +1,24 @@
+\section{Data Collection}
+\label{sec:data-collection}
+
+\subsection{ASL Baseline Data}
+
+The baseline dataset is the ``ASL Alphabet'' dataset on Kaggle~\cite{asl_alphabet_kaggle}, published under the GPL~2 license. It is downloaded with \texttt{data\_scripts/download\_data.py}, which reads the dataset identifier and the destination folder from \texttt{configs/data.yaml}. The images are never committed to the repository.
+
+After download, the training folder contains 29 classes with 3{,}000 JPEG images each, 87{,}000 images in total: the letters A to Z and three extra classes stored as \texttt{del}, \texttt{nothing} and \texttt{space}. The separate test folder contains 28 images. These counts come from listing the downloaded files.
+
+The dataset is American Sign Language. It is used only to build and test the data pipeline and as a comparison point; it is not PSL data.
+
+\subsection{PSL Data Collected by the Team}
+
+\todobox{\textbf{Owner: Aliza.} Describe the PSL collection and provide evidence:
+\begin{itemize}[leftmargin=1.5em, topsep=2pt]
+  \item The collection protocol: which letters (and which letter set, A--Z or Urdu letters), hand positions, lighting, backgrounds, camera, and the minimum number of images per letter per person.
+  \item The consent process and how privacy is protected (anonymous IDs such as \texttt{p01}, no names stored, images kept out of Git).
+  \item How the sign list was checked against a PSL source or a PSL user, with a citation.
+  \item The number of volunteers and images actually collected (real counts only).
+  \item Where the dataset is hosted and how to request access.
+  \item Collection evidence figure: \texttt{reports/figures/psl\_sample\_grid.png} (a grid of example images, one per letter, from volunteers who agreed to have them shown).
+\end{itemize}}
+
+\safefigure{psl_sample_grid.png}{Example PSL images, one per letter.}{fig:psl-sample-grid}
