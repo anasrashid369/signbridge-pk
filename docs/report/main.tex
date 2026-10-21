@@ -1,0 +1,81 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\figdir}{../../reports/figures/}
+\graphicspath{{../../reports/figures/}}
+
+% Visible box for content a team member still has to supply.
+\newcommand{\todobox}[1]{%
+  \par\medskip\noindent
+  \fcolorbox{red!70!black}{red!4}{%
+    \parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{%
+      \textbf{\textcolor{red!70!black}{TODO}}\par\smallskip #1}}%
+  \par\medskip}
+
+% Include a figure from reports/figures/ if it exists, otherwise show a TODO box.
+\newcommand{\safefigure}[3]{%
+  \IfFileExists{\figdir #1}{%
+    \begin{figure}[htbp]
+      \centering
+      \includegraphics[width=0.85\linewidth]{#1}
+      \caption{#2}
+      \label{#3}
+    \end{figure}%
+  }{%
+    \todobox{Missing figure \texttt{reports/figures/\detokenize{#1}}: #2}%
+  }}
+
+\begin{document}
+
+\pagenumbering{alph}
+\begin{titlepage}
+  \centering
+  \vspace*{3cm}
+  {\Huge\bfseries SignBridge PK\par}
+  \vspace{0.8cm}
+  {\Large Real-time Pakistan Sign Language Alphabet Recognizer\par}
+  \vspace{1.5cm}
+  {\large Deliverable 1: Problem Definition and Data Acquisition\par}
+  \vspace{2.5cm}
+  {\large\bfseries Team\par}
+  \vspace{0.4cm}
+  \begin{tabular}{ll}
+    Aliza  & Data Lead \\
+    Fatima & Model Lead \\
+    Anas   & App and DevOps Lead \\
+  \end{tabular}
+  \vfill
+\end{titlepage}
+
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+\input{sections/problem_statement}
+\input{sections/target_audience}
+\input{sections/ai_justification}
+\input{sections/data_collection}
+\input{sections/data_cleaning}
+\input{sections/feature_strategy}
+\input{sections/eda}
+\input{sections/challenges}
+
+\bibliographystyle{plain}
+\begingroup
+\raggedright
+\bibliography{references}
+\endgroup
+
+\end{document}
