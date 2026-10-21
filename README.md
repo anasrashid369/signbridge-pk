@@ -93,3 +93,16 @@ Options: `--dataset owner/name` overrides the Kaggle slug, `--dest PATH` overrid
 
 - Scope is static letter signs only.
 - Deployment is excluded; the app runs locally.
+   ### Extract hand landmarks
+
+   Download the MediaPipe hand landmarker model once (it is not in Git):
+
+```
+   curl.exe -L -o models/hand_landmarker.task https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
+```
+
+   Scripts inside subfolders are run as modules from the repository root:
+
+```
+   python -m data_scripts.features.extract --help
+```
