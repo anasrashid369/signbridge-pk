@@ -1,0 +1,26 @@
+\section{Target Audience}
+\label{sec:audience}
+
+SignBridge PK is a \textbf{learning and practice aid}. It is not a replacement for a qualified PSL interpreter and must not be used where an accurate interpretation matters, such as medical, legal or official settings. The groups below are the intended users and what each of them needs from the tool. No user testing has been carried out yet; these needs describe the design goals, not observed results.
+
+\begin{description}[style=nextline, leftmargin=1.5em]
+  \item[Learners of PSL]
+    People starting to learn PSL need to practise letter signs on their own and get immediate feedback on whether their hand shape is recognised. They need clear output (the predicted letter and how confident the system is) and a way to retry quickly.
+
+  \item[Family members and classmates of PSL users]
+    Hearing people who live, study or work with a PSL user may want to learn fingerspelling so they can spell names and unfamiliar words. They need a tool that runs on an ordinary laptop with a webcam, without special hardware or setup.
+
+  \item[Teachers]
+    Teachers working with deaf or hard-of-hearing students, or teaching PSL, need a simple way to demonstrate letter signs and let students practise between lessons. They need the tool to behave consistently and to show when it is unsure instead of giving a confident wrong answer.
+
+  \item[The PSL community]
+    Signers who want to practise or check letter signs, or help others learn, need the tool to respect PSL as its own language rather than treating it as a variant of ASL. They also need their images handled with care: our own data is to be collected only from consenting volunteers and is not published in the code repository.
+\end{description}
+
+\subsection{What the Tool Does Not Do}
+
+\begin{itemize}
+  \item It does not interpret conversations, words or sentences.
+  \item It does not recognise signs that involve movement.
+  \item It does not claim to work equally well for every signer, hand, lighting condition or camera. How performance varies across these factors is measured in later deliverables.
+\end{itemize}
