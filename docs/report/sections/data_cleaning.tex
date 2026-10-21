@@ -1,0 +1,21 @@
+\section{Data Cleaning}
+\label{sec:data-cleaning}
+
+\todobox{\textbf{Owner: Aliza.} Describe the cleaning scripts in \texttt{data\_scripts/clean/} and report their real results:
+\begin{itemize}[leftmargin=1.5em, topsep=2pt]
+  \item \textbf{Missing values:} unreadable or corrupt image files, empty files, and images without a class label. How many were found and what was done with them.
+  \item \textbf{Duplicates:} exact duplicates (identical file hashes) and near-duplicates, with the method and how many were removed.
+  \item \textbf{Outliers:} blurry images (variance of the Laplacian below \texttt{quality.blur\_threshold}) and images that are too dark or too bright (mean grayscale outside \texttt{quality.brightness\_min} and \texttt{quality.brightness\_max}). State the final threshold values and how they were chosen from the data.
+  \item Mislabelled images found by manual review.
+  \item A table of counts before and after each cleaning step, for the ASL baseline and for the PSL data.
+  \item The class-name mapping between dataset folders (\texttt{del}, \texttt{nothing}, \texttt{space}) and the label map.
+\end{itemize}
+Figures, saved in \texttt{reports/figures/} with the thresholds drawn as vertical lines:
+\begin{itemize}[leftmargin=1.5em, topsep=2pt]
+  \item \texttt{blur\_scores.png}
+  \item \texttt{brightness\_distribution.png}
+\end{itemize}}
+
+\safefigure{blur_scores.png}{Distribution of blur scores (variance of the Laplacian) with the blur threshold.}{fig:blur-scores}
+
+\safefigure{brightness_distribution.png}{Distribution of mean image brightness with the lower and upper thresholds.}{fig:brightness}
