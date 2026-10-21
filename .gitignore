@@ -40,6 +40,7 @@ data/processed/*
 *.pkl
 *.joblib
 *.onnx
+*.task
 
 # LaTeX build files (the final report PDF is kept)
 *.aux
