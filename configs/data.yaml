@@ -12,6 +12,8 @@ paths:
   manifest: data/processed/manifest.csv   # one row per image: path, label, person_id, split, ...
   label_map: data/processed/label_map.json  # letter to class index
   figures_dir: reports/figures            # EDA charts used in the report
+  cleaning_report: data/interim/cleaning_report.csv  # one row per image with quality scores and flags (not in Git)
+  cleaning_summary: reports/cleaning_summary.csv     # counts per class before and after each cleaning step
 
   hand_model: models/hand_landmarker.task  # MediaPipe hand landmarker model file (downloaded separately, not in Git)
 dataset:
