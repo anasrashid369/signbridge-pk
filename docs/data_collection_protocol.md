@@ -1,0 +1,58 @@
+# SignBridge PK: Data Collection Protocol and Consent Note
+
+This protocol covers the PSL (Pakistan Sign Language) photos collected by our
+team. The Kaggle ASL baseline is separate and is not covered here.
+
+## 1. Scope
+- Static letter signs only. No motion, no words, no sentences.
+- Letters to collect: [FILL IN: confirmed static PSL letters]
+- Label names: each letter gets a short ASCII label with no underscores or
+  spaces (for example, a romanized name). Labels are listed here and in
+  `data/processed/label_map.json`: [FILL IN: label list]
+- Sign shapes are checked against: [FILL IN: PSL reference or person]
+
+## 2. Volunteers
+- Target: 5 to 10 volunteers.
+- Each volunteer gets an anonymous ID: p01, p02, p03, ...
+- No names or contact details are stored with the photos or in the repo.
+- A private sheet kept outside the repo links each ID to a first name or
+  contact, only so a volunteer can later ask for their photos to be deleted.
+  This sheet is never committed or shared with assessors.
+
+## 3. Consent note (read to each volunteer before shooting)
+"Your hand photos will be used only for a university project that builds a
+Pakistan Sign Language alphabet recognizer. Please keep your face out of the
+frame. Photos are stored under an anonymous ID, never your name. They are not
+uploaded to GitHub and are not shared outside the project team and course
+assessors. You may stop at any time and ask us to delete your photos."
+
+Consent (yes or no per volunteer ID) is recorded in the private sheet.
+
+## 4. What to capture
+- Every letter in section 1, for every volunteer.
+- Right hand by default. If a volunteer signs left-handed, note it in the
+  private sheet.
+- Hand positions: [FILL IN: for example centered, slightly left, slightly right]
+- Lighting: normal, dim, bright.
+- Background: plain, cluttered.
+- Minimum per letter per volunteer: 10 images spread across these variations
+  (proposed; confirm as a team).
+- Keep the whole hand visible. Avoid heavy motion blur.
+- Optional, self-reported by the volunteer: a coarse skin tone group, noted in
+  the private sheet only. It is used for the bias analysis and is not stored
+  with the photos.
+
+## 5. Storage and naming
+- Save into the PSL folder set in `configs/data.yaml` (`data/raw/psl`).
+  Never commit it.
+- File name: `{person_id}_{label}_{lighting}_{background}_{index}.jpg`
+  Example: `p03_alif_dim_plain_004.jpg`
+- Use only these values: lighting is one of `normal`, `dim`, `bright`;
+  background is one of `plain`, `cluttered`. No underscores inside a value.
+- The manifest builder reads person_id, label, lighting and background from
+  the file name, so do not change this pattern.
+
+## 6. After collection
+- Run the cleaning scripts (`data_scripts/clean/`) before building the manifest.
+- If a volunteer withdraws consent, delete all files starting with their
+  person_id.
