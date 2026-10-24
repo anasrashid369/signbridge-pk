@@ -10,7 +10,9 @@ from PIL import Image
 from data_scripts.features.extract import (
     create_landmarker,
     extract_features,
+    extract_raw_landmarks,
     find_images,
+    folder_to_label,
     landmarks_to_array,
     save_cache,
     save_detections,
@@ -62,9 +64,7 @@ def test_find_images_sampling_is_reproducible(tmp_path: Path) -> None:
 
 
 def test_save_detections_writes_rows(tmp_path: Path) -> None:
-    destination = save_detections(
-        tmp_path, [("A/1.jpg", "A", True), ("A/2.jpg", "A", False)]
-    )
+    destination = save_detections(tmp_path, [("A/1.jpg", "A", True), ("A/2.jpg", "A", False)])
     lines = destination.read_text(encoding="utf-8").splitlines()
     assert lines[0] == "path,label,detected"
     assert lines[2] == "A/2.jpg,A,False"
@@ -72,16 +72,20 @@ def test_save_detections_writes_rows(tmp_path: Path) -> None:
 
 def test_save_cache_round_trip(tmp_path: Path) -> None:
     vectors = [np.zeros(63), np.ones(63)]
-    destination = save_cache(tmp_path, vectors, [0, 1], ["A/1.jpg", "B/1.jpg"])
+    raw_vectors = [np.full(63, 0.5), np.full(63, 0.25)]
+    destination = save_cache(tmp_path, vectors, raw_vectors, [0, 1], ["A/1.jpg", "B/1.jpg"])
     data = np.load(destination)
     assert data["X"].shape == (2, 63)
+    assert data["raw"].shape == (2, 63)
+    assert np.allclose(data["raw"][1], 0.25)
     assert list(data["y"]) == [0, 1]
     assert list(data["paths"]) == ["A/1.jpg", "B/1.jpg"]
 
 
 def test_save_cache_with_no_images(tmp_path: Path) -> None:
-    data = np.load(save_cache(tmp_path, [], [], []))
+    data = np.load(save_cache(tmp_path, [], [], [], []))
     assert data["X"].shape == (0, 63)
+    assert data["raw"].shape == (0, 63)
 
 
 def test_blank_image_has_no_hand(tmp_path: Path) -> None:
@@ -93,3 +97,30 @@ def test_blank_image_has_no_hand(tmp_path: Path) -> None:
     Image.new("RGB", (224, 224), color=(200, 200, 200)).save(blank)
     with create_landmarker(model) as landmarker:
         assert extract_features(landmarker, blank) is None
+
+
+def test_folder_to_label_maps_kaggle_names() -> None:
+    assert folder_to_label("del") == "DELETE"
+    assert folder_to_label("nothing") == "NOTHING"
+    assert folder_to_label("space") == "SPACE"
+    assert folder_to_label("a") == "A"
+
+
+def test_find_images_labels_del_folder_as_delete(tmp_path: Path) -> None:
+    touch(tmp_path / "del" / "1.jpg")
+    touch(tmp_path / "nothing" / "1.jpg")
+    label_map = {"A": 0, "DELETE": 1, "NOTHING": 2, "SPACE": 3}
+    items, skipped = find_images(tmp_path, label_map, max_per_class=0, seed=0)
+    assert sorted(label for _, label in items) == ["DELETE", "NOTHING"]
+    assert skipped == 0
+
+
+def test_blank_image_has_no_raw_landmarks(tmp_path: Path) -> None:
+    pytest.importorskip("mediapipe")
+    model = resolve_path(load_config(DEFAULT_CONFIG_PATH), "hand_model")
+    if not model.is_file():
+        pytest.skip("hand landmarker model not downloaded")
+    blank = tmp_path / "blank.png"
+    Image.new("RGB", (224, 224), color=(200, 200, 200)).save(blank)
+    with create_landmarker(model) as landmarker:
+        assert extract_raw_landmarks(landmarker, blank) is None

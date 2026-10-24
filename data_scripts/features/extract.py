@@ -22,6 +22,8 @@ from signbridge.logging_setup import setup_logging
 logger = logging.getLogger(__name__)
 
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png"}
+# Kaggle folder names (upper case) that differ from the class names in label_map.json.
+FOLDER_ALIASES = {"DEL": "DELETE"}
 NUM_FEATURES = NUM_LANDMARKS * NUM_COORDS  # 63 numbers per hand
 FEATURES_FILE = "landmark_features.npz"  # saved inside paths.processed_dir
 DETECTIONS_FILE = "landmark_detections.csv"  # saved inside paths.processed_dir
@@ -45,15 +47,15 @@ def landmarks_to_array(points: Any) -> np.ndarray:
     return np.array([[point.x, point.y, point.z] for point in points], dtype=np.float64)
 
 
-def extract_features(landmarker: Any, image_path: Path) -> np.ndarray | None:
-    """Return the 63 normalized landmark values of the hand in an image.
+def extract_raw_landmarks(landmarker: Any, image_path: Path) -> np.ndarray | None:
+    """Return the raw MediaPipe landmarks of the hand in an image, shape (21, 3).
 
     Returns:
-        A flat array of 63 numbers, or None if no hand was detected.
+        The landmark array, or None if no hand was detected.
 
     Raises:
-        RuntimeError, ValueError, OSError: If the image is unreadable or the
-            landmarks cannot be normalized. The caller logs these and skips the image.
+        RuntimeError, ValueError, OSError: If the image cannot be read.
+            The caller logs these and skips the image.
     """
     import mediapipe as mp
 
@@ -61,7 +63,19 @@ def extract_features(landmarker: Any, image_path: Path) -> np.ndarray | None:
     result = landmarker.detect(image)
     if not result.hand_landmarks:
         return None
-    return normalize_landmarks(landmarks_to_array(result.hand_landmarks[0]))
+    return landmarks_to_array(result.hand_landmarks[0])
+
+
+def extract_features(landmarker: Any, image_path: Path) -> np.ndarray | None:
+    """Return the 63 normalized landmark values of the hand in an image, or None if no hand."""
+    raw = extract_raw_landmarks(landmarker, image_path)
+    return None if raw is None else normalize_landmarks(raw)
+
+
+def folder_to_label(folder_name: str) -> str:
+    """Return the class name for a folder name: upper case, with known aliases applied."""
+    name = folder_name.upper()
+    return FOLDER_ALIASES.get(name, name)
 
 
 def find_images(
@@ -84,7 +98,7 @@ def find_images(
     for path in sorted(root.rglob("*")):
         if path.suffix.lower() not in IMAGE_SUFFIXES:
             continue
-        label = path.parent.name.upper()
+        label = folder_to_label(path.parent.name)
         if label not in label_map:
             skipped += 1
             continue
@@ -102,14 +116,19 @@ def find_images(
 
 
 def save_cache(
-    out_dir: Path, vectors: list[np.ndarray], label_ids: list[int], paths: list[str]
+    out_dir: Path,
+    vectors: list[np.ndarray],
+    raw_vectors: list[np.ndarray],
+    label_ids: list[int],
+    paths: list[str],
 ) -> Path:
-    """Save features (X), class indices (y) and image paths to one .npz file."""
+    """Save normalized features (X), raw landmarks (raw), class indices (y) and paths."""
     out_dir.mkdir(parents=True, exist_ok=True)
     destination = out_dir / FEATURES_FILE
     np.savez_compressed(
         destination,
         X=np.asarray(vectors, dtype=np.float32).reshape(-1, NUM_FEATURES),
+        raw=np.asarray(raw_vectors, dtype=np.float32).reshape(-1, NUM_FEATURES),
         y=np.asarray(label_ids, dtype=np.int64),
         paths=np.asarray(paths, dtype=str),
     )
@@ -175,6 +194,7 @@ def run(args: argparse.Namespace) -> None:
     )
 
     vectors: list[np.ndarray] = []
+    raw_vectors: list[np.ndarray] = []
     label_ids: list[int] = []
     kept_paths: list[str] = []
     records: list[tuple[str, str, bool]] = []
@@ -183,22 +203,24 @@ def run(args: argparse.Namespace) -> None:
         for index, (path, label) in enumerate(items, start=1):
             relative = path.relative_to(images_dir).as_posix()
             try:
-                vector = extract_features(landmarker, path)
+                raw = extract_raw_landmarks(landmarker, path)
+                vector = None if raw is None else normalize_landmarks(raw)
             except (RuntimeError, ValueError, OSError) as error:
                 logger.warning("Skipping unreadable image %s: %s", relative, error)
                 unreadable += 1
                 continue
             records.append((relative, label, vector is not None))
-            if vector is None:
+            if raw is None or vector is None:
                 logger.warning("No hand found in %s", relative)
             else:
                 vectors.append(vector)
+                raw_vectors.append(raw.flatten())
                 label_ids.append(label_map[label])
                 kept_paths.append(relative)
             if index % LOG_EVERY == 0:
                 logger.info("Processed %d of %d images", index, len(items))
 
-    features_file = save_cache(out_dir, vectors, label_ids, kept_paths)
+    features_file = save_cache(out_dir, vectors, raw_vectors, label_ids, kept_paths)
     detections_file = save_detections(out_dir, records)
     logger.info(
         "Hand found in %d of %d images (%d unreadable images skipped)",
