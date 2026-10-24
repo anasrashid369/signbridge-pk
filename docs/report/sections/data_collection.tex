@@ -11,7 +11,7 @@ The dataset is American Sign Language. It is used only to build and test the dat
 
 \subsection{PSL Data Collected by the Team}
 
-The PSL photos are collected by the team under a written protocol, \texttt{docs/data\_collection\_protocol.md}.
+The PSL photos are collected by the team under a written protocol, \path{docs/data_collection_protocol.md}.
 
 \begin{itemize}
   \item \textbf{Scope:} static letter signs only, with no motion, words or sentences.
@@ -26,6 +26,6 @@ The script \texttt{data\_scripts/build\_manifest.py} builds \texttt{data/process
 
 \subsection{Status of the PSL Collection}
 
-At the time of writing, no PSL photos have been collected: the folder \texttt{data/raw/psl} does not exist yet, so the dataset contains 0 volunteers and 0 images. The letter set has not been confirmed, and no PSL dictionary, deaf association or PSL user has yet been consulted to check the sign shapes. These two points must be settled before collection starts, and the protocol leaves the corresponding fields blank rather than guessing them.
+At the time of writing, no PSL photos have been collected: the folder \texttt{data/raw/psl} does not exist yet, so the dataset contains 0 volunteers and 0 images. The letter set has not been confirmed, and no PSL dictionary, deaf association or PSL user has yet been consulted to check the sign shapes. These two points must be settled before collection starts, and the protocol marks the corresponding fields as to be decided in Deliverable 2 rather than guessing them.
 
 What exists is the pipeline. The collection protocol is written, and the manifest builder and the cleaning and EDA scripts have been built and tested. The cleaning and EDA scripts have been run on a sample of the ASL baseline (2{,}900 images, 100 per class, 29 classes). PSL collection continues in Deliverable 2, and the dataset hosting link will be added once PSL data exists.
