@@ -87,7 +87,9 @@ def save_figure(figure: Figure, path: Path) -> None:
     logger.info("Saved %s", path)
 
 
-def plot_class_distribution(report: pd.DataFrame, output: Path) -> None:
+def plot_class_distribution(
+    report: pd.DataFrame, output: Path, names: dict[str, str] = SOURCE_NAMES
+) -> None:
     """Bar chart of images per class, one panel per dataset."""
     sources = present_sources(report)
     figure, axes = plt.subplots(len(sources), 1, figsize=(10, 3.6 * len(sources)), squeeze=False)
@@ -95,12 +97,14 @@ def plot_class_distribution(report: pd.DataFrame, output: Path) -> None:
         counts = report[report["source"] == source]["label"].replace("", "(no label)")
         counts = counts.value_counts().sort_index()
         ax.bar(counts.index, counts.values, color=COLORS[source], width=0.6)
-        style_axes(ax, f"Images per class: {SOURCE_NAMES[source]}", "Class", "Number of images")
+        style_axes(ax, f"Images per class: {names[source]}", "Class", "Number of images")
         ax.tick_params(axis="x", rotation=90)
     save_figure(figure, output)
 
 
-def plot_image_sizes(report: pd.DataFrame, output: Path) -> None:
+def plot_image_sizes(
+    report: pd.DataFrame, output: Path, names: dict[str, str] = SOURCE_NAMES
+) -> None:
     """Histograms of image width and height before resizing, one row per dataset."""
     sources = present_sources(report)
     figure, axes = plt.subplots(len(sources), 2, figsize=(10, 3.4 * len(sources)), squeeze=False)
@@ -110,7 +114,7 @@ def plot_image_sizes(report: pd.DataFrame, output: Path) -> None:
             ax.hist(readable[column], bins=30, color=COLORS[source])
             style_axes(
                 ax,
-                f"{column.capitalize()}: {SOURCE_NAMES[source]}",
+                f"{column.capitalize()}: {names[source]}",
                 f"{column.capitalize()} in pixels",
                 "Number of images",
             )
@@ -139,6 +143,7 @@ def plot_distribution(
     labels: tuple[str, str],
     output: Path,
     log_x: bool = False,
+    names: dict[str, str] = SOURCE_NAMES,
 ) -> None:
     """Histogram of one score per dataset with the cleaning thresholds as dashed lines."""
     sources = present_sources(report)
@@ -159,11 +164,16 @@ def plot_distribution(
                 color=INK,
                 fontsize=9,
             )
-        style_axes(ax, f"{labels[0]}: {SOURCE_NAMES[source]}", labels[1], "Number of images")
+        style_axes(ax, f"{labels[0]}: {names[source]}", labels[1], "Number of images")
     save_figure(figure, output)
 
 
-def plot_blur_scores(report: pd.DataFrame, blur_threshold: float, output: Path) -> None:
+def plot_blur_scores(
+    report: pd.DataFrame,
+    blur_threshold: float,
+    output: Path,
+    names: dict[str, str] = SOURCE_NAMES,
+) -> None:
     """Histogram of blur scores (variance of the Laplacian) with the blur threshold."""
     positive = report["blur_score"][report["blur_score"] > 0]
     if positive.empty:
@@ -179,11 +189,16 @@ def plot_blur_scores(report: pd.DataFrame, blur_threshold: float, output: Path) 
         ("Blur scores", "Variance of the Laplacian (log scale; low means blurry)"),
         output,
         log_x=True,
+        names=names,
     )
 
 
 def plot_brightness(
-    report: pd.DataFrame, brightness_min: float, brightness_max: float, output: Path
+    report: pd.DataFrame,
+    brightness_min: float,
+    brightness_max: float,
+    output: Path,
+    names: dict[str, str] = SOURCE_NAMES,
 ) -> None:
     """Histogram of mean brightness with the lower and upper thresholds."""
     bins = np.linspace(0, 255, BRIGHTNESS_BINS)
@@ -194,6 +209,7 @@ def plot_brightness(
         {"min": brightness_min, "max": brightness_max},
         ("Image brightness", "Mean grayscale value (0 is black, 255 is white)"),
         output,
+        names=names,
     )
 
 
@@ -205,7 +221,11 @@ def first_images_per_class(report: pd.DataFrame, source: str) -> list[tuple[str,
 
 
 def plot_sample_grid(
-    report: pd.DataFrame, source: str, output: Path, root: Path = REPO_ROOT
+    report: pd.DataFrame,
+    source: str,
+    output: Path,
+    root: Path = REPO_ROOT,
+    names: dict[str, str] = SOURCE_NAMES,
 ) -> bool:
     """Save a grid with one raw example image per class. Returns False if there are none."""
     examples = first_images_per_class(report, source)
@@ -223,21 +243,21 @@ def plot_sample_grid(
         except READ_ERRORS as error:
             logger.warning("Could not draw %s: %s", path, error)
         ax.set_title(label, fontsize=10, color=INK)
-    figure.suptitle(f"One raw example per class: {SOURCE_NAMES[source]}", color=INK)
+    figure.suptitle(f"One raw example per class: {names[source]}", color=INK)
     save_figure(figure, output)
     return True
 
 
-def log_statistics(report: pd.DataFrame) -> None:
+def log_statistics(report: pd.DataFrame, names: dict[str, str] = SOURCE_NAMES) -> None:
     """Log the numbers behind the charts so the report text can quote them exactly."""
     for source in present_sources(report):
         rows = report[report["source"] == source]
         counts = rows["label"].replace("", "(no label)").value_counts()
         readable = rows[rows["width"].notna()]
-        logger.info("%s: %d image files, %d classes", SOURCE_NAMES[source], len(rows), len(counts))
+        logger.info("%s: %d image files, %d classes", names[source], len(rows), len(counts))
         logger.info(
             "%s: images per class min %d (%s), max %d (%s)",
-            SOURCE_NAMES[source],
+            names[source],
             counts.min(),
             counts.idxmin(),
             counts.max(),
@@ -246,7 +266,7 @@ def log_statistics(report: pd.DataFrame) -> None:
         if not readable.empty:
             logger.info(
                 "%s: width %d-%d px, height %d-%d px",
-                SOURCE_NAMES[source],
+                names[source],
                 readable["width"].min(),
                 readable["width"].max(),
                 readable["height"].min(),
@@ -254,7 +274,7 @@ def log_statistics(report: pd.DataFrame) -> None:
             )
             logger.info(
                 "%s: blur score median %.1f, brightness median %.1f",
-                SOURCE_NAMES[source],
+                names[source],
                 readable["blur_score"].median(),
                 readable["brightness"].median(),
             )
@@ -271,6 +291,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Also save psl_sample_grid.png. Use it only if the volunteers agreed to be shown.",
     )
+    parser.add_argument(
+        "--asl-label",
+        default=SOURCE_NAMES["asl"],
+        help="How the ASL data is named in every figure title, for example "
+        "'ASL baseline (sample, 100 per class)'. Say here if you did not use the full download.",
+    )
     return parser.parse_args(argv)
 
 
@@ -280,20 +306,22 @@ def run(args: argparse.Namespace) -> None:
     report = load_report(resolve_path(config, "cleaning_report"))
     figures = resolve_path(config, "figures_dir")
     quality = config["quality"]
-    log_statistics(report)
-    plot_class_distribution(report, figures / "class_distribution.png")
-    plot_image_sizes(report, figures / "image_size_distribution.png")
+    names = {**SOURCE_NAMES, "asl": args.asl_label}
+    log_statistics(report, names)
+    plot_class_distribution(report, figures / "class_distribution.png", names)
+    plot_image_sizes(report, figures / "image_size_distribution.png", names)
     plot_images_per_person(report, figures / "images_per_person.png")
-    plot_blur_scores(report, quality["blur_threshold"], figures / "blur_scores.png")
+    plot_blur_scores(report, quality["blur_threshold"], figures / "blur_scores.png", names)
     plot_brightness(
         report,
         quality["brightness_min"],
         quality["brightness_max"],
         figures / "brightness_distribution.png",
+        names,
     )
-    plot_sample_grid(report, "asl", figures / "asl_sample_grid.png")
+    plot_sample_grid(report, "asl", figures / "asl_sample_grid.png", names=names)
     if args.psl_sample_grid:
-        plot_sample_grid(report, "psl", figures / "psl_sample_grid.png")
+        plot_sample_grid(report, "psl", figures / "psl_sample_grid.png", names=names)
 
 
 def main(argv: list[str] | None = None) -> int:

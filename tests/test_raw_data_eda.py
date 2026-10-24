@@ -95,3 +95,59 @@ def test_help_exits_cleanly() -> None:
     with pytest.raises(SystemExit) as info:
         raw_data_eda.parse_args(["--help"])
     assert info.value.code == 0
+
+
+def capture_titles(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Replace save_figure so the test can read the titles instead of saving a PNG."""
+    titles: list[str] = []
+
+    def fake_save(figure, path) -> None:  # noqa: ANN001
+        titles.extend(ax.get_title(loc="left") for ax in figure.axes if ax.get_title(loc="left"))
+        if figure._suptitle is not None:
+            titles.append(figure._suptitle.get_text())
+
+    monkeypatch.setattr(raw_data_eda, "save_figure", fake_save)
+    return titles
+
+
+def test_asl_label_appears_in_every_asl_figure_title(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clean_both(tmp_path)
+    report = raw_data_eda.load_report(tmp_path / "interim/cleaning_report.csv")
+    label = "ASL baseline (sample, 100 per class)"
+    names = {"asl": label, "psl": "PSL"}
+    titles = capture_titles(monkeypatch)
+    raw_data_eda.plot_class_distribution(report, tmp_path / "a.png", names)
+    raw_data_eda.plot_image_sizes(report, tmp_path / "b.png", names)
+    raw_data_eda.plot_blur_scores(report, 100.0, tmp_path / "c.png", names)
+    raw_data_eda.plot_brightness(report, 40, 220, tmp_path / "d.png", names)
+    raw_data_eda.plot_sample_grid(report, "asl", tmp_path / "e.png", names=names)
+    asl_titles = [title for title in titles if "PSL" not in title]
+    assert len(asl_titles) >= 5
+    assert all(label in title for title in asl_titles)
+
+
+def test_default_titles_use_the_plain_asl_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clean_both(tmp_path)
+    report = raw_data_eda.load_report(tmp_path / "interim/cleaning_report.csv")
+    titles = capture_titles(monkeypatch)
+    raw_data_eda.plot_class_distribution(report, tmp_path / "a.png")
+    assert any("ASL baseline" in title for title in titles)
+    assert not any("sample" in title for title in titles)
+
+
+def test_parse_args_reads_asl_label() -> None:
+    assert raw_data_eda.parse_args([]).asl_label == "ASL baseline"
+    args = raw_data_eda.parse_args(["--asl-label", "ASL baseline (sample)"])
+    assert args.asl_label == "ASL baseline (sample)"
+
+
+def test_run_uses_the_asl_label_in_the_figures(tmp_path: Path) -> None:
+    config = clean_both(tmp_path)
+    add_figures_dir(config, tmp_path)
+    args = ["--config", str(config), "--asl-label", "ASL baseline (sample, 100 per class)"]
+    assert raw_data_eda.main(args) == 0
+    assert (tmp_path / "figures" / "class_distribution.png").stat().st_size > 0

@@ -103,7 +103,10 @@ Run after cleaning. Saves the figures for the report to `reports/figures/`. Add 
 
 ```bash
 python -m data_scripts.eda.raw_data_eda
+python -m data_scripts.eda.raw_data_eda --asl-label "ASL baseline (sample, 100 per class)"   # if you cleaned a sample
 ```
+
+`--asl-label` sets how the ASL data is named in every figure title. Use it whenever the ASL charts come from a sample and not the full download.
 
 ## Coming in Later Deliverables
 
