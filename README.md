@@ -78,6 +78,33 @@ python data_scripts/download_data.py             # download into data/raw/asl_al
 
 Options: `--dataset owner/name` overrides the Kaggle slug, `--dest PATH` overrides the download folder, and `--config PATH` uses a different config file. After the download, the script logs where to place the team's PSL images (`data/raw/psl`).
 
+### Build the PSL manifest
+
+Needs the team's PSL photos in `data/raw/psl`, named `{person_id}_{label}_{lighting}_{background}_{index}.jpg` (see `docs/data_collection_protocol.md`). Splits whole volunteers into train, validation and test, and fails if a person would appear in two splits.
+
+```bash
+python data_scripts/build_manifest.py            # writes data/processed/manifest.csv
+```
+
+### Clean the images
+
+Flags unreadable files, missing labels, exact and near duplicates, and blurry, dark, bright or tiny images. Nothing is deleted. Run it once per dataset; `--limit-per-class 500` cleans a random sample per class for a quick run.
+
+```bash
+python -m data_scripts.clean.clean_images --source asl --limit-per-class 500
+python -m data_scripts.clean.clean_images --source psl
+```
+
+Writes `data/interim/cleaning_report.csv` (one row per image, not committed), `reports/cleaning_summary.csv` (counts per class after each step) and `reports/cleaning_summary_table.tex` (table for the report).
+
+### Draw the raw-data charts
+
+Run after cleaning. Saves the figures for the report to `reports/figures/`. Add `--psl-sample-grid` only if every volunteer shown agreed to it.
+
+```bash
+python -m data_scripts.eda.raw_data_eda
+```
+
 ## Coming in Later Deliverables
 
 - Feature extraction, classifiers and MobileNetV2 training (Deliverable 2)

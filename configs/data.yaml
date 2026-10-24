@@ -14,10 +14,12 @@ paths:
   figures_dir: reports/figures            # EDA charts used in the report
   cleaning_report: data/interim/cleaning_report.csv  # one row per image with quality scores and flags (not in Git)
   cleaning_summary: reports/cleaning_summary.csv     # counts per class before and after each cleaning step
+  cleaning_table: reports/cleaning_summary_table.tex # LaTeX table of the counts per dataset, included in the report
 
   hand_model: models/hand_landmarker.task  # MediaPipe hand landmarker model file (downloaded separately, not in Git)
 dataset:
   kaggle_slug: grassknoted/asl-alphabet   # ASL baseline data from Kaggle, not PSL
+  asl_train_folder: asl_alphabet_train    # folder name of the labelled ASL training images (the test folder is not cleaned)
 
 image:
   size: 224                               # side length in pixels after resizing (MobileNetV2 input size)
@@ -26,6 +28,8 @@ quality:                                  # starting values, to be tuned from ED
   blur_threshold: 100.0                   # minimum variance of the Laplacian; below this an image counts as blurry
   brightness_min: 40                      # minimum mean grayscale value (0-255); darker images are flagged
   brightness_max: 220                     # maximum mean grayscale value (0-255); brighter images are flagged
+  min_side: 64                            # smallest allowed width or height in pixels; smaller images are flagged
+  near_duplicate_distance: 4              # max differing bits (of 64) between two image hashes to call them near-duplicates
 
 manifest:                                 # settings for data_scripts/build_manifest.py
   lighting_values: [normal, dim, bright]  # allowed lighting words in PSL file names (see the protocol)
