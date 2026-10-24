@@ -1,19 +1,27 @@
 \section{Exploratory Data Analysis}
 \label{sec:eda}
 
-\todobox{\textbf{Owner: Aliza.} Produce the figures below with scripts in \texttt{data\_scripts/eda/}, save them to \texttt{reports/figures/} with exactly these file names, and write two to four sentences under each figure about what it shows. Use real numbers from the data only.
-\begin{itemize}[leftmargin=1.5em, topsep=2pt]
-  \item \texttt{class\_distribution.png}: number of images per class, for the ASL baseline and the PSL data.
-  \item \texttt{asl\_sample\_grid.png}: one raw example image per ASL class.
-  \item \texttt{image\_size\_distribution.png}: image width and height before resizing.
-  \item \texttt{images\_per\_person.png}: number of PSL images per volunteer (anonymous IDs), to show balance across people.
+The script \texttt{data\_scripts/eda/raw\_data\_eda.py} draws the charts of the raw data from the per-image cleaning report, so the charts show the images before any image is removed. Every title says whether a chart shows the ASL baseline or the PSL photos, and the two datasets always use the same two colours. The figures are saved in \texttt{reports/figures/}. The blur and brightness charts are in Section~\ref{sec:data-cleaning}, because they show the thresholds used there.
+
+\begin{itemize}
+  \item \textbf{Images per class} (Figure~\ref{fig:class-distribution}): how many images each class has, which shows whether the classes are balanced.
+  \item \textbf{ASL examples} (Figure~\ref{fig:asl-sample-grid}): the first readable image of each class in path order, so the examples are not hand-picked.
+  \item \textbf{Image sizes} (Figure~\ref{fig:image-size}): width and height in pixels before resizing.
+  \item \textbf{Images per volunteer} (Figure~\ref{fig:images-per-person}): the number of PSL images per anonymous volunteer ID, which shows whether the volunteers are balanced. This chart exists only once PSL photos have been collected.
 \end{itemize}
-Cleaning figures (blur, brightness) appear in the Data Cleaning section, and the PSL sample grid in Data Collection.}
 
 \safefigure{class_distribution.png}{Number of images per class.}{fig:class-distribution}
 
+Each of the 29 ASL classes (A to Z, \texttt{del}, \texttt{nothing} and \texttt{space}) has exactly 100 images, because the sample was made with 100 images per class. The classes are therefore balanced by construction.
+
 \safefigure{asl_sample_grid.png}{One raw example image per ASL class.}{fig:asl-sample-grid}
+
+The grid shows the first image of each class in file-name order, as it is stored, before any resizing or cleaning.
 
 \safefigure{image_size_distribution.png}{Image width and height before resizing.}{fig:image-size}
 
+All 2{,}900 ASL images are 200 by 200 pixels, so the sample has no variation in size. For the image-based model they are resized to the size set by \texttt{image.size} in the configuration.
+
 \safefigure{images_per_person.png}{Number of PSL images per volunteer.}{fig:images-per-person}
+
+\todobox{\textbf{Owner: Aliza.} Images per volunteer (Figure~\ref{fig:images-per-person}): add two to four sentences once PSL photos are cleaned and the chart exists, using real numbers only. If there are no PSL photos yet, say so plainly and leave the chart out. Also check that the sentence under the sample grid matches what the figure shows, and add what you see in it if useful.}

@@ -1,19 +1,45 @@
 \section{Data Cleaning}
 \label{sec:data-cleaning}
 
-\todobox{\textbf{Owner: Aliza.} Describe the cleaning scripts in \texttt{data\_scripts/clean/} and report their real results:
+The cleaning script \texttt{data\_scripts/clean/clean\_images.py} checks every image of one dataset (the ASL baseline or the PSL photos) and writes its findings to a report. It never deletes or changes an image file: it only flags problems and counts them. All thresholds are read from \texttt{configs/data.yaml}, section \texttt{quality}, so none is hard-coded. For the ASL baseline only the labelled training folder is cleaned; the separate test folder is left out.
+
+\subsection{Cleaning Steps}
+
+The steps run in this order, and each step looks only at the images that earlier steps kept.
+\begin{enumerate}
+  \item \textbf{Missing data: unreadable files and missing labels.} An image is flagged if the file is empty, corrupt or cannot be decoded as an image. An image also counts as missing its label if an ASL image lies outside a class folder, or if a PSL file name does not follow the collection protocol, so that no label can be read from it.
+  \item \textbf{Exact duplicates.} The SHA-256 hash of each file's bytes is computed. Files with identical hashes are exact copies; the first copy in path order is kept and later copies are flagged. This check runs across all classes, so an identical file stored under two labels is also found.
+  \item \textbf{Near-duplicates.} Each image is converted to grayscale and shrunk to $9 \times 8$ pixels, and each pixel is compared with its right neighbour, which gives a 64-bit difference hash. Two images of the same class whose hashes differ in at most \texttt{quality.near\_duplicate\_distance} bits are near-duplicates; the first is kept and the later one is flagged. Each flagged image records the path of the image it duplicates, so the pairs can be checked by eye.
+  \item \textbf{Outliers.} An image is flagged if its shorter side is below \texttt{quality.min\_side} pixels; if it is blurry, meaning the variance of its Laplacian is below \texttt{quality.blur\_threshold}; or if its mean grayscale value is below \texttt{quality.brightness\_min} (too dark) or above \texttt{quality.brightness\_max} (too bright).
+\end{enumerate}
+
+\subsection{Outputs}
+
+The script writes three files. The per-image report (path, dataset, class, volunteer, size, hash, blur score, brightness and every flag) is saved in \texttt{data/interim/} and is not committed. The counts per class after each step are saved in \texttt{reports/cleaning\_summary.csv}, and a table of the totals per dataset is saved as \texttt{reports/cleaning\_summary\_table.tex} and included below. Running the script again for one dataset replaces only that dataset's rows. For a quick run, the option \texttt{-{}-limit-per-class} cleans a random sample of each class, chosen with the \texttt{seed} from the configuration so the same images are chosen every time.
+
+\subsection{Class Names}
+
+The cleaning outputs keep the class names exactly as the dataset folders write them: the letters A to Z, and the three extra ASL classes \texttt{del}, \texttt{nothing} and \texttt{space}. The committed label map contains the 26 letters only (see Section~\ref{sec:feature-strategy}), so these three classes do not appear in it.
+
+\subsection{Results}
+
+\IfFileExists{../../reports/cleaning_summary_table.tex}{%
+  \input{../../reports/cleaning_summary_table.tex}%
+}{%
+  \todobox{Missing table \texttt{reports/cleaning\_summary\_table.tex}. Run the cleaning script for the ASL baseline and for the PSL photos to create it.}%
+}
+
+The script was run on the ASL sample supplied by the team, which has 100 images for each of the 29 classes, 2{,}900 images in all. It was not run on the full 87{,}000-image dataset. Table~\ref{tab:cleaning-counts} shows how many images remain after each step. All 2{,}900 files were readable and labelled, and no two files were identical. The near-duplicate step flagged 856 images (29.5\%), leaving 2{,}044, and the outlier step removed no further images.
+
+\paragraph{Near-duplicates.} The distance limit is 4 bits, which was a starting value. We looked at flagged pairs and judged them to be the same sign photographed at almost the same moment, so the limit was kept.
+
+\paragraph{Blur and brightness.} The final thresholds are the values in \texttt{configs/data.yaml}: blur threshold 100, brightness limits 40 and 220, and a minimum side of 64 pixels. The blur scores of the sample range from 347 to 1{,}766, with 1\% of the images below 485 and 5\% below 663, so a threshold of 100 lies far below every image (Figure~\ref{fig:blur-scores}). The mean brightness values range from about 70 to 186, inside the limits (Figure~\ref{fig:brightness}); the four brightest images, with means from 177 to 186, all belong to the \texttt{nothing} class, which shows an empty background. We looked at the blurriest and the darkest images and judged them usable. We kept the thresholds and did not tighten them to this sample, because their purpose is to catch unusable photos in our own PSL collection, where dim lighting and phone cameras make blurred or very dark images likely. They will be checked again once the PSL photos are cleaned.
+
+\todobox{\textbf{Owner: Aliza.} Still to add, using real results only:
 \begin{itemize}[leftmargin=1.5em, topsep=2pt]
-  \item \textbf{Missing values:} unreadable or corrupt image files, empty files, and images without a class label. How many were found and what was done with them.
-  \item \textbf{Duplicates:} exact duplicates (identical file hashes) and near-duplicates, with the method and how many were removed.
-  \item \textbf{Outliers:} blurry images (variance of the Laplacian below \texttt{quality.blur\_threshold}) and images that are too dark or too bright (mean grayscale outside \texttt{quality.brightness\_min} and \texttt{quality.brightness\_max}). State the final threshold values and how they were chosen from the data.
-  \item Mislabelled images found by manual review.
-  \item A table of counts before and after each cleaning step, for the ASL baseline and for the PSL data.
-  \item The class-name mapping between dataset folders (\texttt{del}, \texttt{nothing}, \texttt{space}) and the label map.
-\end{itemize}
-Figures, saved in \texttt{reports/figures/} with the thresholds drawn as vertical lines:
-\begin{itemize}[leftmargin=1.5em, topsep=2pt]
-  \item \texttt{blur\_scores.png}
-  \item \texttt{brightness\_distribution.png}
+  \item Mislabelled images found by manual review: how many images you looked at, how, and what you found. The script cannot find these. If you did not review any, say so.
+  \item The same table and counts for the PSL photos, once they are collected and cleaned (\texttt{python -m data\_scripts.clean.clean\_images -{}-source psl}). If there are no PSL photos yet, say that plainly.
+  \item Check that the two sentences above that describe what you looked at by eye match what you actually saw, and change them if not.
 \end{itemize}}
 
 \safefigure{blur_scores.png}{Distribution of blur scores (variance of the Laplacian) with the blur threshold.}{fig:blur-scores}

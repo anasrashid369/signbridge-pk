@@ -11,14 +11,22 @@ The dataset is American Sign Language. It is used only to build and test the dat
 
 \subsection{PSL Data Collected by the Team}
 
-\todobox{\textbf{Owner: Aliza.} Describe the PSL collection and provide evidence:
+The PSL photos are collected by the team under a written protocol, \texttt{docs/data\_collection\_protocol.md}.
+
+\begin{itemize}
+  \item \textbf{Scope:} static letter signs only, with no motion, words or sentences.
+  \item \textbf{Volunteers:} the aim is 5 to 10 volunteers. Each gets an anonymous ID (\texttt{p01}, \texttt{p02}, \ldots); no names or contact details are stored with the photos or in the repository.
+  \item \textbf{Consent:} before shooting, a short consent note is read to each volunteer. It says the photos are used only for this university project, asks the volunteer to keep their face out of the frame, and explains that the photos are stored under an anonymous ID, are not uploaded to GitHub and are not shared beyond the project team and course assessors, and that the volunteer can stop at any time and ask for the photos to be deleted. Consent is recorded per volunteer ID in a private sheet kept outside the repository; the same sheet is the only link between an ID and a person, and it exists only so a volunteer can ask for their photos to be deleted.
+  \item \textbf{What is captured:} every letter for every volunteer, with the right hand by default, under three lighting conditions (normal, dim, bright) and two backgrounds (plain, cluttered), with a proposed minimum of 10 images per letter per volunteer, spread across these variations.
+  \item \textbf{Storage:} photos are saved outside Git in \texttt{data/raw/psl} with file names of the form \texttt{p03\_alif\_dim\_plain\_004.jpg}: volunteer, letter label, lighting, background and image number. The scripts read these facts from the file name.
+\end{itemize}
+
+\todobox{\textbf{Owner: Aliza.} Add what only the real collection can tell, using real numbers only:
 \begin{itemize}[leftmargin=1.5em, topsep=2pt]
-  \item The collection protocol: which letters (and which letter set, A--Z or Urdu letters), hand positions, lighting, backgrounds, camera, and the minimum number of images per letter per person.
-  \item The consent process and how privacy is protected (anonymous IDs such as \texttt{p01}, no names stored, images kept out of Git).
-  \item How the sign list was checked against a PSL source or a PSL user, with a citation.
-  \item The number of volunteers and images actually collected (real counts only).
+  \item Which letter set was collected (the confirmed list of static PSL letters) and how the sign shapes were checked against a PSL source or a PSL user, with a citation.
+  \item The number of volunteers and images actually collected. State the real number of volunteers, even if it is fewer than the 5 to 10 planned or none yet; the cleaning script's report shows the image counts per letter and per volunteer.
   \item Where the dataset is hosted and how to request access.
-  \item Collection evidence figure: \texttt{reports/figures/psl\_sample\_grid.png} (a grid of example images, one per letter, from volunteers who agreed to have them shown).
+  \item The collection evidence figure \texttt{reports/figures/psl\_sample\_grid.png}. Create it with the option \texttt{-{}-psl-sample-grid} of the EDA script, and only if every volunteer shown agreed to it.
 \end{itemize}}
 
 \safefigure{psl_sample_grid.png}{Example PSL images, one per letter.}{fig:psl-sample-grid}
