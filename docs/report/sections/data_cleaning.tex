@@ -23,11 +23,7 @@ The cleaning outputs keep the class names exactly as the dataset folders write t
 
 \subsection{Results}
 
-\IfFileExists{../../reports/cleaning_summary_table.tex}{%
-  \input{../../reports/cleaning_summary_table.tex}%
-}{%
-  \todobox{Missing table \texttt{reports/cleaning\_summary\_table.tex}. Run the cleaning script for the ASL baseline and for the PSL photos to create it.}%
-}
+\input{../../reports/cleaning_summary_table.tex}
 
 The script was run on the ASL sample supplied by the team, which has 100 images for each of the 29 classes, 2{,}900 images in all. It was not run on the full 87{,}000-image dataset. Table~\ref{tab:cleaning-counts} shows how many images remain after each step. All 2{,}900 files were readable and labelled, and no two files were identical. The near-duplicate step flagged 856 images (29.5\%), leaving 2{,}044, and the outlier step removed no further images.
 
@@ -35,13 +31,10 @@ The script was run on the ASL sample supplied by the team, which has 100 images 
 
 \paragraph{Blur and brightness.} The final thresholds are the values in \texttt{configs/data.yaml}: blur threshold 100, brightness limits 40 and 220, and a minimum side of 64 pixels. The blur scores of the sample range from 347 to 1{,}766, with 1\% of the images below 485 and 5\% below 663, so a threshold of 100 lies far below every image (Figure~\ref{fig:blur-scores}). The mean brightness values range from about 70 to 186, inside the limits (Figure~\ref{fig:brightness}); the four brightest images, with means from 177 to 186, all belong to the \texttt{nothing} class, which shows an empty background. We looked at the blurriest and the darkest images and judged them usable. We kept the thresholds and did not tighten them to this sample, because their purpose is to catch unusable photos in our own PSL collection, where dim lighting and phone cameras make blurred or very dark images likely. They will be checked again once the PSL photos are cleaned.
 
-\todobox{\textbf{Owner: Aliza.} Still to add, using real results only:
-\begin{itemize}[leftmargin=1.5em, topsep=2pt]
-  \item Mislabelled images found by manual review: how many images you looked at, how, and what you found. The script cannot find these. If you did not review any, say so.
-  \item The same table and counts for the PSL photos, once they are collected and cleaned (\texttt{python -m data\_scripts.clean.clean\_images -{}-source psl}). If there are no PSL photos yet, say that plainly.
-  \item Check that the two sentences above that describe what you looked at by eye match what you actually saw, and change them if not.
-\end{itemize}}
+\paragraph{What is not covered yet.} The script cannot detect mislabelled images, and no count of mislabelled images is reported here. No PSL photos have been collected yet, so Table~\ref{tab:cleaning-counts} contains the ASL baseline only; the same script will clean the PSL photos in Deliverable~2.
 
-\safefigure{blur_scores.png}{Distribution of blur scores (variance of the Laplacian) with the blur threshold.}{fig:blur-scores}
+\paragraph{Manifest and split.} The manifest builder (\texttt{data\_scripts/build\_manifest.py}) and its person-wise train, validation and test split were merged early and are covered by tests, including one that fails if a volunteer appears in two splits; they will be used in Deliverable~2, once PSL photos exist.
 
-\safefigure{brightness_distribution.png}{Distribution of mean image brightness with the lower and upper thresholds.}{fig:brightness}
+\safefigure{blur_scores.png}{Distribution of blur scores (variance of the Laplacian) with the blur threshold, for all 2{,}900 images of the ASL baseline sample (100 per class).}{fig:blur-scores}
+
+\safefigure{brightness_distribution.png}{Distribution of mean image brightness with the lower and upper thresholds, for all 2{,}900 images of the ASL baseline sample (100 per class).}{fig:brightness}
