@@ -5,18 +5,18 @@ seed: 42                                  # random seed for splits, sampling and
 
 paths:
   raw_dir: data/raw                       # all downloaded and collected images (not in Git)
-  asl_raw_dir: data/raw/asl_alphabet      # ASL baseline dataset after download
-  psl_raw_dir: data/raw/psl               # team-collected PSL images (layout set by the collection protocol)
-  interim_dir: data/interim               # intermediate outputs such as cleaned copies (not in Git)
-  processed_dir: data/processed           # tracked outputs: manifest and label map
-  manifest: data/processed/manifest.csv   # one row per image: path, label, person_id, split, ...
-  label_map: data/processed/label_map.json  # letter to class index
-  figures_dir: reports/figures            # EDA charts used in the report
+  asl_raw_dir: data/raw/asl_alphabet      # ASL baseline dataset after download (not in Git)
+  psl_raw_dir: data/raw/psl               # team-collected PSL photos, named as in the collection protocol (not in Git)
+  interim_dir: data/interim               # folder for intermediate outputs (not in Git)
+  processed_dir: data/processed           # landmark feature cache goes here (not in Git); only the two files below are committed
+  manifest: data/processed/manifest.csv   # one row per PSL image: path, label, person_id, split, lighting, background (committed; no skin tone)
+  label_map: data/processed/label_map.json  # class name to index, 26 letters A-Z (committed)
+  figures_dir: reports/figures            # charts and the detection table used in the report (committed)
   cleaning_report: data/interim/cleaning_report.csv  # one row per image with quality scores and flags (not in Git)
   cleaning_summary: reports/cleaning_summary.csv     # counts per class before and after each cleaning step (committed)
   cleaning_table: reports/cleaning_summary_table.tex # LaTeX table of the counts per dataset, included in the report (committed)
-
   hand_model: models/hand_landmarker.task  # MediaPipe hand landmarker model file (downloaded separately, not in Git)
+
 dataset:
   kaggle_slug: grassknoted/asl-alphabet   # ASL baseline data from Kaggle, not PSL
   asl_train_folder: asl_alphabet_train    # folder name of the labelled ASL training images (the test folder is not cleaned)
