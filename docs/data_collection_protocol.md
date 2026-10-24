@@ -5,11 +5,11 @@ team. The Kaggle ASL baseline is separate and is not covered here.
 
 ## 1. Scope
 - Static letter signs only. No motion, no words, no sentences.
-- Letters to collect: [FILL IN: confirmed static PSL letters]
+- Letters to collect: [not confirmed yet]
 - Label names: each letter gets a short ASCII label with no underscores or
   spaces (for example, a romanized name). Labels are listed here and in
-  `data/processed/label_map.json`: [FILL IN: label list]
-- Sign shapes are checked against: [FILL IN: PSL reference or person]
+  `data/processed/label_map.json`: [not decided yet]
+- Sign shapes are checked against: [not verified yet. No PSL dictionary, association or PSL user has been consulted so far]
 
 ## 2. Volunteers
 - Target: 5 to 10 volunteers.
@@ -38,7 +38,7 @@ Consent (yes or no per volunteer ID) is recorded in the private sheet.
 - Every letter in section 1, for every volunteer.
 - Right hand by default. If a volunteer signs left-handed, note it in the
   private sheet.
-- Hand positions: [FILL IN: for example centered, slightly left, slightly right]
+- Hand positions: [to be agreed by the team before collection starts]
 - Lighting: normal, dim, bright.
 - Background: plain, cluttered.
 - Minimum per letter per volunteer: 10 images spread across these variations
