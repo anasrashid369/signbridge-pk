@@ -7,21 +7,21 @@ The script \texttt{data\_scripts/eda/raw\_data\_eda.py} draws the charts of the 
   \item \textbf{Images per class} (Figure~\ref{fig:class-distribution}): how many images each class has, which shows whether the classes are balanced.
   \item \textbf{ASL examples} (Figure~\ref{fig:asl-sample-grid}): the first readable image of each class in path order, so the examples are not hand-picked.
   \item \textbf{Image sizes} (Figure~\ref{fig:image-size}): width and height in pixels before resizing.
-  \item \textbf{Images per volunteer} (Figure~\ref{fig:images-per-person}): the number of PSL images per anonymous volunteer ID, which shows whether the volunteers are balanced. This chart exists only once PSL photos have been collected.
+  \item \textbf{Images per volunteer}: the number of PSL images per anonymous volunteer ID, which shows whether the volunteers are balanced. This chart can only be drawn once PSL photos exist (see below).
 \end{itemize}
 
-\safefigure{class_distribution.png}{Number of images per class.}{fig:class-distribution}
+\safefigure{class_distribution.png}{Number of images per class in the ASL baseline sample: 2{,}900 images, 100 for each of the 29 class folders.}{fig:class-distribution}
 
 Each of the 29 ASL classes (A to Z, \texttt{del}, \texttt{nothing} and \texttt{space}) has exactly 100 images, because the sample was made with 100 images per class. The classes are therefore balanced by construction.
 
-\safefigure{asl_sample_grid.png}{One raw example image per ASL class.}{fig:asl-sample-grid}
+\safefigure{asl_sample_grid.png}{One raw example image for each of the 29 class folders of the ASL baseline sample (29 of its 2{,}900 images).}{fig:asl-sample-grid}
 
 The grid shows the first image of each class in file-name order, as it is stored, before any resizing or cleaning.
 
-\safefigure{image_size_distribution.png}{Image width and height before resizing.}{fig:image-size}
+\safefigure{image_size_distribution.png}{Image width and height before resizing, for all 2{,}900 images of the ASL baseline sample.}{fig:image-size}
 
 All 2{,}900 ASL images are 200 by 200 pixels, so the sample has no variation in size. For the image-based model they are resized to the size set by \texttt{image.size} in the configuration.
 
-\safefigure{images_per_person.png}{Number of PSL images per volunteer.}{fig:images-per-person}
+\paragraph{PSL photos.} No PSL photos have been collected yet, so there is no chart of images per volunteer and no example grid of PSL photos (Section~\ref{sec:data-collection}). Collection continues in Deliverable~2, and both charts will be drawn from the same script once the photos are cleaned.
 
-\todobox{\textbf{Owner: Aliza.} Images per volunteer (Figure~\ref{fig:images-per-person}): add two to four sentences once PSL photos are cleaned and the chart exists, using real numbers only. If there are no PSL photos yet, say so plainly and leave the chart out. Also check that the sentence under the sample grid matches what the figure shows, and add what you see in it if useful.}
+\paragraph{Feature charts.} The charts of the extracted hand landmarks are shown with the feature strategy, next to the steps they describe: the hand detection rate per class (Figure~\ref{fig:detection-rate}), the landmarks before and after normalisation (Figure~\ref{fig:normalization}) and the correlation between the normalised features (Figure~\ref{fig:feature-correlation}). All three come from 20 tested images of the ASL baseline, in 15 of which a hand was detected (Section~\ref{sec:feature-results}).
