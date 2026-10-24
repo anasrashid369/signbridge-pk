@@ -7,7 +7,6 @@ paths:
   raw_dir: data/raw                       # all downloaded and collected images (not in Git)
   asl_raw_dir: data/raw/asl_alphabet      # ASL baseline dataset after download (not in Git)
   psl_raw_dir: data/raw/psl               # team-collected PSL photos, named as in the collection protocol (not in Git)
-  interim_dir: data/interim               # folder for intermediate outputs (not in Git)
   processed_dir: data/processed           # landmark feature cache goes here (not in Git); only the two files below are committed
   manifest: data/processed/manifest.csv   # one row per PSL image: path, label, person_id, split, lighting, background (committed; no skin tone)
   label_map: data/processed/label_map.json  # class name to index, 26 letters A-Z (committed)
