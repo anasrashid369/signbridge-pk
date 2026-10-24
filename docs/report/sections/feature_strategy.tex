@@ -1,17 +1,17 @@
 \section{Feature Strategy}
 \label{sec:feature-strategy}
 
-The project prepares two feature sets from each image, plus a numeric encoding of the labels. The code is in \texttt{data\_scripts/features/}.
+The project prepares two feature sets from each image, plus a numeric encoding of the labels. The code is in \texttt{data\_scripts/features/}. All numbers in this section come from a small ASL baseline sample of 22 images, two per class (Section~\ref{sec:feature-results}); no PSL photos were processed for it.
 
 \subsection{Hand Landmark Extraction}
 
-\texttt{extract.py} turns images into landmark feature vectors. It uses the MediaPipe hand landmarker in single-image mode, limited to one hand per image. The model file is set by \texttt{paths.hand\_model} in \texttt{configs/data.yaml}; it is downloaded separately and kept out of Git.
+\texttt{extract.py} turns images into landmark feature vectors. It uses the MediaPipe hand landmarker in single-image mode, limited to one hand per image, with MediaPipe's default detection confidence of 0.5. The model file is set by \texttt{paths.hand\_model} in \texttt{configs/data.yaml}; it is downloaded separately and kept out of Git.
 
 \begin{enumerate}
-  \item \textbf{Finding images:} images (\texttt{.jpg}, \texttt{.jpeg}, \texttt{.png}) are labelled by the name of their folder, converted to upper case. Folders whose name is not in the label map are skipped and counted. By default the script takes a random sample of 50 images per class, using \texttt{seed} from the configuration so the sample is the same on every run; the sample size can be changed on the command line, with 0 meaning all images.
-  \item \textbf{Detecting the hand:} for each image the landmarker returns the 21 landmarks of the detected hand, or nothing if no hand is found. Unreadable images are logged and skipped.
+  \item \textbf{Finding images:} images (\texttt{.jpg}, \texttt{.jpeg}, \texttt{.png}) are labelled by the name of their folder, converted to upper case. The Kaggle folder \texttt{del} is mapped to \texttt{DELETE} by a one-entry alias table in \texttt{extract.py}. Folders whose name is not in the label map are skipped and counted. By default the script takes a random sample of 50 images per class, using \texttt{seed} from the configuration so the sample is the same on every run; the sample size can be changed on the command line, with 0 meaning all images.
+  \item \textbf{Detecting the hand:} for each image the landmarker returns the 21 landmarks of the detected hand, or nothing if no hand is found. Unreadable images, and hands that cannot be normalised, are logged and skipped.
   \item \textbf{Normalising:} the landmarks of each detected hand are normalised as described below, giving 63 values.
-  \item \textbf{Caching:} the vectors, their class indices and the image paths are saved together in \texttt{landmark\_features.npz}, and one row per image (path, label, whether a hand was detected) is saved in \texttt{landmark\_detections.csv}. Both files go to \texttt{paths.processed\_dir} and are not committed.
+  \item \textbf{Caching:} the normalised vectors, the raw landmarks before normalisation, the class indices and the image paths are saved together in \texttt{landmark\_features.npz}, and one row per image (path, label, whether a hand was detected) is saved in \texttt{landmark\_detections.csv}. Both files go to \texttt{paths.processed\_dir} and are not committed. The raw landmarks are kept so that the effect of normalisation can be plotted.
 \end{enumerate}
 
 \subsection{Hand Landmark Normalisation}
@@ -21,7 +21,21 @@ Each landmark has $x$, $y$ and $z$ coordinates. The function in \texttt{landmark
   \item \textbf{Translation:} the wrist (landmark 0) is subtracted from every landmark, so the wrist becomes the origin and the hand's position in the image no longer matters.
   \item \textbf{Scaling:} every coordinate is divided by the hand size, defined as the distance from the wrist to the base of the middle finger (landmark 9), computed over $x$, $y$ and $z$. The hand's size in the image, and so its distance from the camera, no longer matters.
 \end{enumerate}
-The result is flattened into a vector of 63 values (21 landmarks $\times$ 3 coordinates). The function rejects inputs of the wrong shape and hands whose size is zero. Tests check that shifting or scaling a hand leaves its features unchanged.
+The result is flattened into a vector of 63 values (21 landmarks $\times$ 3 coordinates). The function rejects inputs of the wrong shape and hands whose size is zero. Tests check that shifting or scaling a hand leaves its features unchanged. On the 15 hands of the sample in which a hand was found, the largest absolute value of any wrist coordinate after normalisation was 0.0 and all 15 hand sizes equalled 1.0 to six decimal places.
+
+\paragraph{Why these steps.} Raw MediaPipe coordinates depend on where the hand is in the image and how large it appears, and neither tells us which letter is signed. Subtracting the wrist removes the position. Dividing by one hand-size number removes the scale while keeping the shape of the hand. The wrist is a natural origin because MediaPipe already reports depth relative to it. The hand size uses the wrist-to-landmark-9 distance because it measures the palm and not the fingers, so it should change little when the fingers bend into different letters. We did not compare other choices, for example the full hand span, so this is a reasoned choice and not a tested one.
+
+\paragraph{Why $z$ is included.} MediaPipe gives $x$ and $y$ as fractions of the image width and height, and $z$ as depth relative to the wrist; its documentation states that $z$ has roughly the same scale as $x$. Including $z$ in the hand size means that one number rescales the whole three-dimensional hand and the proportions between the three coordinates are kept. In principle it also reduces the effect of a hand tilted towards the camera, which looks shorter in $x$ and $y$ but not in depth. However, $z$ is an estimate made by the model, and we have not compared this choice with a hand size computed from $x$ and $y$ only.
+
+\paragraph{Non-square images.} Equal fractions of width and height are equal distances only in a square image. The ASL baseline images are 200 by 200 pixels (Section~\ref{sec:eda}), so this does not matter for them. A photo in portrait or landscape format would distort the hand size and shape slightly. The code does not correct this yet; multiplying $x$ and $y$ by the image width and height before normalising would.
+
+\subsection{Open Design Questions}
+
+\paragraph{Rotation.} The normalisation does not remove rotation, and the before-and-after chart (Figure~\ref{fig:normalization}) shows that hand orientation does vary: some hands extend below the wrist. We kept it because orientation may carry meaning. In the ASL baseline, for example, G and Q, and K and P, differ mainly in the direction the hand points; whether this also holds for PSL letters is not yet known. Making the features rotation-invariant would tolerate a tilted camera but could remove exactly this difference. We have not compared the two options; this is a candidate experiment for Deliverable 2.
+
+\paragraph{Left hands.} The code does not look at which hand it sees, so a left hand and a right hand forming the same letter give mirrored vectors. The options are to mirror left hands to right hands, to train on both, or to restrict data collection to one hand. This is an open team decision. Our suggestion is to restrict collection to one hand, because it needs no extra code, and to revisit mirroring only if volunteers sign with different hands.
+
+\paragraph{Missing or invalid values.} If MediaPipe finds no hand, no vector is created and the image is counted as not detected. If a vector cannot be normalised because of a wrong shape or a zero hand size, the function raises an error, and the image is logged and skipped. The function does not check for non-finite values (NaN or infinity), which would pass through into the feature vector. We have not seen any: all values in the cached vectors of the sample are finite.
 
 \subsection{Image Features}
 
@@ -31,19 +45,59 @@ For the image-based model, \texttt{images.py} converts each image to RGB, resize
 
 \texttt{labels.py} maps each class name to an integer index: A to Z become 0 to 25. With the \texttt{-{}-include-special} option, the three extra ASL classes follow as 26 to 28, so letter indices stay the same either way. The mapping is saved as \texttt{data/processed/label\_map.json}, which is committed so every script and model uses the same indices. The committed file contains the 26 letters only.
 
-\todobox{\textbf{Owner: Fatima.} Review the description above and add:
-\begin{itemize}[leftmargin=1.5em, topsep=2pt]
-  \item Why these normalisation steps were chosen, and why the hand size uses $z$ as well as $x$ and $y$.
-  \item Whether the features should also be rotation-invariant, given that some letters may differ mainly in orientation.
-  \item How left hands are handled (open team question: mirror to right hand, train on both, or restrict collection).
-  \item What happens with missing or invalid landmark values (non-finite values currently pass through).
-  \item Why integer indices were chosen for the labels, and where one-hot encoding is used if at all.
-  \item Whether the label map should use the dataset folder names (\texttt{del}, \texttt{nothing}, \texttt{space}) or a mapping step. With the committed 26-letter map, extraction skips all three classes; with \texttt{-{}-include-special}, \texttt{nothing} and \texttt{space} match after upper-casing but \texttt{del} (\texttt{DEL}) still does not match \texttt{DELETE}.
-  \item Hand detection results: run the extraction and report how many images had a detected hand, per class, from \texttt{landmark\_detections.csv} (real counts only). Figure: \texttt{reports/figures/landmark\_detection\_rate.png}.
-  \item Why a sample of 50 images per class was chosen for extraction, and whether the full dataset will be used later.
-  \item Feature EDA figure: \texttt{reports/figures/landmark\_feature\_pca.png} (2D projection of normalised landmark vectors, coloured by letter), if produced.
-\end{itemize}}
+\paragraph{Integer indices.} We use integer indices because common training libraries accept them directly as class labels, and because a single number per class is easy to store in the cache and in the JSON file. We have not used one-hot encoding. It can be created from the indices in Deliverable 2 if the chosen training setup needs it.
 
-\safefigure{landmark_detection_rate.png}{Share of images in which a hand was detected, per class.}{fig:detection-rate}
+\paragraph{Folder names.} We chose a mapping step over renaming the classes after the dataset folders. The label map keeps the clear name \texttt{DELETE}, and \texttt{extract.py} translates the one Kaggle folder name that differs (\texttt{del}). The folders \texttt{nothing} and \texttt{space} already match after upper-casing. Because the committed label map has the 26 letters only, extraction skips images of the three special classes; two \texttt{nothing} images were skipped this way in the sample. Whether to include them as classes is an open team decision, and the letter indices do not change if they are added.
 
-\safefigure{landmark_feature_pca.png}{Normalised landmark feature vectors projected to two dimensions, coloured by letter.}{fig:landmark-pca}
+\subsection{Hand Detection Results}
+\label{sec:feature-results}
+
+To test the pipeline we ran the extraction with \texttt{-{}-max-per-class 0} on a sample of 22 ASL baseline images: two images for each of the letters A, B, C, E, L, M, N, S, V and Y, and two images of the class \texttt{nothing}. The two \texttt{nothing} images were skipped, which leaves 20 images. MediaPipe found a hand in 15 of the 20 (75\%). Table~\ref{tab:detection} gives the counts per class; they are also saved in \texttt{reports/figures/detection\_rate\_per\_class.csv}.
+
+\begin{table}[htbp]
+\centering
+\caption{Hand detection per class on the ASL baseline sample.}
+\label{tab:detection}
+\begin{tabular}{lrrr}
+\hline
+Class & Images & Hand found & Rate (\%) \\
+\hline
+A & 2 & 2 & 100 \\
+B & 2 & 2 & 100 \\
+C & 2 & 1 & 50 \\
+E & 2 & 2 & 100 \\
+L & 2 & 2 & 100 \\
+M & 2 & 2 & 100 \\
+N & 2 & 0 & 0 \\
+S & 2 & 1 & 50 \\
+V & 2 & 1 & 50 \\
+Y & 2 & 2 & 100 \\
+\hline
+Total & 20 & 15 & 75 \\
+\hline
+\end{tabular}
+\end{table}
+
+\safefigure{detection_rate_per_class.png}{Share of the 20 tested ASL baseline images in which a hand was detected, per class (two images per class).}{fig:detection-rate}
+
+With two images per class, one miss changes a class from 100\% to 50\%, so the rates of different classes cannot be compared and the sample says nothing about which letters are hard to detect.
+
+\paragraph{The five missed images.} The misses are one image each of C, S and V and both N images. A person can see a hand in all five. The pictures are low resolution, the hand fills most of the frame, in most of them it touches or crosses the edge, three show closed or curled fingers, and in two the fingers point downwards. We do not know why MediaPipe missed them.
+
+In a one-off check, which is not part of the repository, we ran the landmarker again on these five images with the detection and presence confidence set to 0.3 and to 0.1 instead of 0.5. It found a hand in one of the five at 0.3 and in all five at 0.1. We drew the 21 landmarks on the five images at 0.1 and looked at them. In one image (class C) all 21 landmarks lie bunched on a single fingertip, so that detection is wrong; in the other four the landmarks cover the hand, but we could not check each landmark by eye. We therefore kept the default of 0.5, because a wrong landmark vector is worse than a missing one: the classifier would learn from it. Whether a lower threshold helps would have to be tested on a larger sample, with the extra detections checked.
+
+No vector can be made when no hand is detected. This is one reason the image-based feature set above is kept alongside the landmarks.
+
+\paragraph{Effect of normalisation.} Figure~\ref{fig:normalization} plots the landmarks of the 15 detected hands before and after normalisation. Before, the hands are spread over the image because they sit at different positions and sizes. After, all hands share the wrist as origin and the same hand size.
+
+\safefigure{normalization_before_after.png}{Landmarks of the 15 detected hands before and after normalisation (ASL baseline sample, one colour per hand).}{fig:normalization}
+
+\paragraph{Correlation between features.} Figure~\ref{fig:feature-correlation} shows the correlation between the 60 normalised features that are not constant. The three wrist coordinates are always 0 after normalisation and are left out. There are only 15 hands for 60 features, and with so few hands many strong correlations appear by chance, so we draw no conclusion from this chart. It shows that the code works and will be recomputed on a larger sample.
+
+\safefigure{feature_correlation_heatmap.png}{Correlation between the 60 non-constant normalised landmark features, from 15 hands of the ASL baseline sample.}{fig:feature-correlation}
+
+\paragraph{No projection chart.} We did not make the planned two-dimensional projection of the landmark vectors coloured by letter. With 15 hands and two images per letter it would show nothing reliable. It can be made from the same cache once a larger sample has been processed.
+
+\subsection{Sample Size}
+
+By default the extraction takes 50 images per class. We chose this to keep a run short on a slow computer and to get a class-balanced sample that is the same on every run; the value was not tuned. The numbers above did not use it, because \texttt{-{}-max-per-class 0} takes every image of the 22-image sample. The full dataset has about 87,000 images and can be processed with the same option, but we have not measured how long this takes, and whether Deliverable 2 uses the full dataset is not yet decided.
