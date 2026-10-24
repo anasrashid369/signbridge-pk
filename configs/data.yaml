@@ -26,3 +26,10 @@ quality:                                  # starting values, to be tuned from ED
   blur_threshold: 100.0                   # minimum variance of the Laplacian; below this an image counts as blurry
   brightness_min: 40                      # minimum mean grayscale value (0-255); darker images are flagged
   brightness_max: 220                     # maximum mean grayscale value (0-255); brighter images are flagged
+
+manifest:                                 # settings for data_scripts/build_manifest.py
+  lighting_values: [normal, dim, bright]  # allowed lighting words in PSL file names (see the protocol)
+  background_values: [plain, cluttered]   # allowed background words in PSL file names
+  val_fraction: 0.2                       # share of people held out for validation
+  test_fraction: 0.2                      # share of people held out for the final test
+  
