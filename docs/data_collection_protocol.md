@@ -24,7 +24,13 @@ team. The Kaggle ASL baseline is separate and is not covered here.
 Pakistan Sign Language alphabet recognizer. Please keep your face out of the
 frame. Photos are stored under an anonymous ID, never your name. They are not
 uploaded to GitHub and are not shared outside the project team and course
-assessors. You may stop at any time and ask us to delete your photos."
+assessors. You may stop at any time and ask us to delete your photos.
+
+We would also like to ask which broad skin tone group you belong to (light,
+medium or dark). We ask so that we can check whether the recognizer works
+equally well for different people. This question is optional and you can skip
+it. Your answer is kept only in our private sheet, never with the photos or on
+GitHub, and we never guess it from your photos."
 
 Consent (yes or no per volunteer ID) is recorded in the private sheet.
 
@@ -38,9 +44,8 @@ Consent (yes or no per volunteer ID) is recorded in the private sheet.
 - Minimum per letter per volunteer: 10 images spread across these variations
   (proposed; confirm as a team).
 - Keep the whole hand visible. Avoid heavy motion blur.
-- Optional, self-reported by the volunteer: a coarse skin tone group, noted in
-  the private sheet only. It is used for the bias analysis and is not stored
-  with the photos.
+- Optional skin tone group: see section 7. It is self-reported, never guessed
+  from a photo, and kept in the private sheet only.
 
 ## 5. Storage and naming
 - Save into the PSL folder set in `configs/data.yaml` (`data/raw/psl`).
@@ -56,3 +61,17 @@ Consent (yes or no per volunteer ID) is recorded in the private sheet.
 - Run the cleaning scripts (`data_scripts/clean/`) before building the manifest.
 - If a volunteer withdraws consent, delete all files starting with their
   person_id.
+
+## 7. Skin tone data and the bias analysis
+- The skin tone group is optional. The volunteer chooses it themselves from a
+  coarse scale (light, medium, dark, or prefer not to say; proposed, confirm as
+  a team) after hearing the consent note, and may skip it. We never guess it
+  from a photo.
+- It is kept only in the private sheet outside the repo. It is not a column of
+  the committed `data/processed/manifest.csv`.
+- For the bias analysis it is joined to the results on `person_id` on a local
+  machine. Only aggregate results are committed.
+- A group with fewer than 3 volunteers is never reported, because a group of 1
+  or 2 people could be identified.
+- With only a few volunteers, the bias check is descriptive: it shows what we
+  observed, not a statistical test, and the report says so.
