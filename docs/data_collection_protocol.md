@@ -3,13 +3,20 @@
 This protocol covers the PSL (Pakistan Sign Language) photos collected by our
 team. The Kaggle ASL baseline is separate and is not covered here.
 
+Status: no PSL photos have been collected yet (0 volunteers, 0 photos).
+Collection continues in Deliverable 2.
+
 ## 1. Scope
 - Static letter signs only. No motion, no words, no sentences.
-- Letters to collect: [not confirmed yet]
+- Letters to collect: To be decided in Deliverable 2, from a cited PSL source
+  and checked with a PSL user. Published PSL datasets report different letter
+  counts, so no list is assumed here.
 - Label names: each letter gets a short ASCII label with no underscores or
   spaces (for example, a romanized name). Labels are listed here and in
-  `data/processed/label_map.json`: [not decided yet]
-- Sign shapes are checked against: [not verified yet. No PSL dictionary, association or PSL user has been consulted so far]
+  `data/processed/label_map.json`: To be decided in Deliverable 2. The current
+  label map (26 letters A-Z) fits the ASL baseline only.
+- Sign shapes are checked against: To be decided in Deliverable 2. No PSL
+  dictionary, association or PSL user has been consulted so far.
 
 ## 2. Volunteers
 - Target: 5 to 10 volunteers.
@@ -38,7 +45,7 @@ Consent (yes or no per volunteer ID) is recorded in the private sheet.
 - Every letter in section 1, for every volunteer.
 - Right hand by default. If a volunteer signs left-handed, note it in the
   private sheet.
-- Hand positions: [to be agreed by the team before collection starts]
+- Hand positions: To be decided in Deliverable 2, before collection starts.
 - Lighting: normal, dim, bright.
 - Background: plain, cluttered.
 - Minimum per letter per volunteer: 10 images spread across these variations
