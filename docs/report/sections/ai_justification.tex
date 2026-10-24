@@ -25,6 +25,6 @@ Even the first step, finding the hand in the image, is hard to write as rules. O
 
 A learned model replaces the hand-written thresholds with decision boundaries found from labelled examples. If the training examples come from many people and conditions, the model sees the variation instead of having it described in rules, and new examples can be added by retraining instead of re-tuning by hand. Normalising the landmarks (Section~\ref{sec:feature-strategy}) removes only the position and size of the hand; the remaining variation is what the classifier has to learn.
 
-A learned model can also be evaluated honestly. The dataset manifest records the volunteer and the split of every image, so the model can be tested on people it has not seen during training, which is the situation a real user creates.
+A learned model can also be evaluated honestly. The manifest builder records the volunteer and the split of every PSL image, so once PSL photos are collected the model can be tested on people it has not seen during training, which is the situation a real user creates.
 
 The approach has a limit: a learned model handles only the variation present in its training data. If the volunteers are few or not varied, the model may fail on other people. This is why the PSL data collection and the bias analysis by the data team matter for the result.
