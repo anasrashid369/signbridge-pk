@@ -30,7 +30,6 @@ Thumbs.db
 data/raw/
 data/interim/
 data/processed/*
-!data/processed/.gitkeep
 !data/processed/manifest.csv
 !data/processed/label_map.json
 
