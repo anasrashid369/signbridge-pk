@@ -1,12 +1,30 @@
 \section{AI Justification}
 \label{sec:ai-justification}
 
-\todobox{\textbf{Owner: Fatima.} Explain why this problem needs machine learning rather than hand-written rules. Cover at least:
+The task is to decide which letter of the alphabet a hand shows in a webcam image. This section explains why we use machine learning for this decision instead of hand-written rules. It contains no accuracy numbers; results belong to Deliverable 2.
+
+\subsection{The Variation a Rule Would Have to Handle}
+
+\textbf{Differences between people.} Hands differ in size, finger length and skin tone, and each person forms the same letter a little differently: how far a finger is bent, how wide the fingers are spread, where the thumb rests. Two correct examples of the same letter are therefore never identical.
+
+\textbf{Differences in how the image is captured.} Lighting, background, camera angle and distance change the image even when the sign is the same. In the five ASL baseline sample images where hand detection failed (Section~\ref{sec:feature-results}), the picture is low resolution, the hand fills most of the frame, and in most of them it touches or crosses the edge of the picture.
+
+\textbf{Letters that look alike.} Some letters differ only slightly. In the ASL baseline, A, E, M, N and S are all closed-hand shapes that differ mainly in where the thumb sits relative to the other fingers, and all five are in our sample. A small change in one finger decides the class, while a change of the same size caused by a different person or a different camera angle must be ignored.
+
+\subsection{Why Hand-Written Rules Are Impractical}
+
+A rule-based recogniser would first have to locate the hand and its fingers, then measure quantities such as the bend angle of each finger and the position of the thumb, and then compare them with fixed thresholds written for each letter, for example ``the index finger counts as straight if its bend angle is below a limit''. This breaks down under the variation above in three ways:
 \begin{itemize}[leftmargin=1.5em, topsep=2pt]
-  \item Hand shape varies across people: hand size, finger length, skin tone and how each person forms the same letter.
-  \item Lighting, background, camera angle and distance change the image even when the sign is the same.
-  \item Some letters look very similar (for example closed-fist shapes that differ only in thumb position), so small differences decide the class.
-  \item Why rules are impractical: show what a rule-based approach would need (for example fixed thresholds on finger angles per letter) and why it breaks under the variation above.
-  \item What a learned model provides instead: it learns the decision boundaries from labelled examples and can be evaluated on people it has not seen.
+  \item A threshold that fits one person's hand can fail on another's. One limit cannot suit large and small hands, or different ways of forming the letter.
+  \item For letters that look alike, the thresholds that separate them lie close together, so small measurement errors caused by the camera angle or image noise can flip the result.
+  \item Every new source of variation, such as a new camera, new lighting or new volunteers, means re-tuning thresholds by hand, and tuning the thresholds of one letter can break another.
 \end{itemize}
-Use no accuracy numbers here; results belong to Deliverable 2.}
+Even the first step, finding the hand in the image, is hard to write as rules. Our pipeline uses a ready-made learned model, the MediaPipe hand landmarker, for that step (Section~\ref{sec:feature-strategy}). We have not built a rule-based recogniser on the landmarks, so we make no claim about how well one would perform. The argument here is about the effort and fragility of maintaining many hand-tuned thresholds, not about a measured result.
+
+\subsection{What a Learned Model Provides}
+
+A learned model replaces the hand-written thresholds with decision boundaries found from labelled examples. If the training examples come from many people and conditions, the model sees the variation instead of having it described in rules, and new examples can be added by retraining instead of re-tuning by hand. Normalising the landmarks (Section~\ref{sec:feature-strategy}) removes only the position and size of the hand; the remaining variation is what the classifier has to learn.
+
+A learned model can also be evaluated honestly. The dataset manifest records the volunteer and the split of every image, so the model can be tested on people it has not seen during training, which is the situation a real user creates.
+
+The approach has a limit: a learned model handles only the variation present in its training data. If the volunteers are few or not varied, the model may fail on other people. This is why the PSL data collection and the bias analysis by the data team matter for the result.
