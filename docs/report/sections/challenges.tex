@@ -61,10 +61,30 @@ This section records problems the team actually ran into while setting up the re
 
 \textbf{How we handled it.} The ASL data is labelled as baseline data everywhere it appears (configuration, scripts, README) and is used only to build and test the pipeline. PSL images are to be collected by the team from consenting volunteers.
 
-\textbf{Still open.} Whether the PSL data uses the Latin A--Z manual alphabet or signs for Urdu letters is not yet decided. The current label map assumes A--Z.
+\textbf{Still open.} No PSL photos have been collected yet (0 volunteers, 0 photos), and the PSL letter set is not fixed (Section~\ref{sec:challenge-letter-set}). The current label map, with the letters A to Z, fits the ASL baseline only.
 
 \subsection{Class Names That Do Not Match}
 
 \textbf{What happened.} After downloading the ASL dataset we found that its three extra classes are stored in folders named \texttt{del}, \texttt{nothing} and \texttt{space}, while the label encoding uses \texttt{DELETE}, \texttt{NOTHING} and \texttt{SPACE}. Encoding a folder name directly would fail for these three classes.
 
-\textbf{Still open.} The team still has to decide whether the names are mapped when the manifest is built or whether the label encoding changes to match the folders.
+\textbf{How we fixed it.} The extraction script compares folder names with the label map ignoring case, and maps the one folder name that still differs (\texttt{del}) to \texttt{DELETE}. The team then decided that the classes are the 26 letters only: the three extra classes are not used, and the \texttt{nothing} images serve only as a negative test of hand detection.
+
+\textbf{What we learned.} The names a dataset uses should be checked against the label encoding as soon as the data is downloaded, before any script relies on them.
+
+\subsection{Hands Missed by the Landmark Detector}
+\label{sec:challenge-detection}
+
+\textbf{What happened.} With MediaPipe's default settings, the hand landmarker found a hand in 15 of 20 tested ASL baseline images (Section~\ref{sec:feature-results}). In the five missed images the pictures are low resolution, the hand fills most of the frame and in most of them touches or crosses the edge, three show closed or curled fingers, and in two the fingers point downwards. Lowering the detection and presence confidence from 0.5 to 0.1 found a hand in all five, but in the image of the letter C all 21 landmarks were bunched on a single fingertip, which is a wrong landmark layout.
+
+\textbf{How we handled it.} We kept the default confidence of 0.5, because a wrong landmark vector is worse than a missing one: a classifier would learn from it. The image features are kept alongside the landmarks, so an image without a detected hand can still be used by the image-based model.
+
+\textbf{What we learned.} Two images per class is a very small sample, so the detection rate of 75\% is only indicative. Whether a lower threshold helps has to be tested on a larger sample, with every extra detection checked by eye.
+
+\subsection{No Agreed PSL Letter Set}
+\label{sec:challenge-letter-set}
+
+\textbf{What happened.} To decide which PSL letters to collect, we looked for an agreed list. Published PSL work reports different numbers of letter signs: 36 static signs~\cite{sajid2025ualpha40}, 34 static alphabets~\cite{colorglove_psl} and 37 alphabet signs~\cite{butt_psl_kaggle}.
+
+\textbf{How we handled it.} We did not guess a list. The letter set will be fixed in Deliverable~2 from a cited source and checked with a PSL user, before any PSL photos are collected. Until then the label map contains the 26 letters A to Z, which fit only the ASL baseline.
+
+\textbf{Still open.} The letter set, and therefore the number of PSL classes, is not decided yet.
