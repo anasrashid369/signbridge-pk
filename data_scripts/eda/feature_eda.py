@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 MIN_STD = 1e-9  # features with a smaller spread are constant and have no correlation
 AXIS_NAMES = "xyz"
+TABLE_FILE = "detection_rate_per_class.csv"  # numbers behind the detection rate chart
 
 
 def load_detections(path: Path) -> list[tuple[str, bool]]:
@@ -66,6 +67,21 @@ def feature_name(index: int) -> str:
     return f"{index // NUM_COORDS}{AXIS_NAMES[index % NUM_COORDS]}"
 
 
+def save_detection_table(
+    rates: dict[str, tuple[int, int]], label_order: list[str], destination: Path
+) -> Path:
+    """Save the numbers behind the detection rate chart, one row per class."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with destination.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["label", "images", "hand_found", "detection_rate_percent"])
+        for label in label_order:
+            if label in rates:
+                found, total = rates[label]
+                writer.writerow([label, total, found, round(100 * found / total, 1)])
+    return destination
+
+
 def plot_detection_rate(
     rates: dict[str, tuple[int, int]],
     label_order: list[str],
@@ -75,6 +91,8 @@ def plot_detection_rate(
     """Bar chart of the percentage of images where MediaPipe found a hand, per class."""
     labels = [label for label in label_order if label in rates]
     percent = [100 * rates[label][0] / rates[label][1] for label in labels]
+    found = sum(rates[label][0] for label in labels)
+    total = sum(rates[label][1] for label in labels)
     fig, ax = plt.subplots(figsize=(12, 5))
     ax.bar(labels, percent)
     for position, label in enumerate(labels):
@@ -82,13 +100,19 @@ def plot_detection_rate(
     ax.set_ylim(0, 110)
     ax.set_xlabel("Class")
     ax.set_ylabel("Hand detected (% of images)")
-    ax.set_title(f"{dataset_label}: hand detection rate per class (number above bar = images)")
+    ax.set_title(
+        f"{dataset_label}: hand detection rate per class "
+        f"({found} of {total} sample images had a hand detected)\n"
+        "number above each bar = images tested in that class"
+    )
     fig.tight_layout()
     fig.savefig(destination, dpi=150)
     plt.close(fig)
 
 
-def plot_correlation(features: np.ndarray, destination: Path, dataset_label: str) -> None:
+def plot_correlation(
+    features: np.ndarray, destination: Path, dataset_label: str, images_tested: int
+) -> None:
     """Heatmap of correlations between the normalized landmark features."""
     matrix, kept = correlation_matrix(features)
     names = [feature_name(int(index)) for index in kept]
@@ -97,8 +121,9 @@ def plot_correlation(features: np.ndarray, destination: Path, dataset_label: str
     ax.set_xticks(range(len(names)), names, rotation=90, fontsize=5)
     ax.set_yticks(range(len(names)), names, fontsize=5)
     ax.set_title(
-        f"{dataset_label}: correlation of normalized features "
-        f"({len(kept)} of {features.shape[1]} features, {features.shape[0]} hands)\n"
+        f"{dataset_label}: correlation of normalized features\n"
+        f"{features.shape[0]} hands found in {images_tested} images tested; "
+        f"{len(kept)} of {features.shape[1]} features shown\n"
         "name = landmark number + axis; constant features (wrist) are left out"
     )
     fig.colorbar(image, ax=ax, label="correlation")
@@ -112,6 +137,7 @@ def plot_before_after(
     normalized: np.ndarray,
     destination: Path,
     dataset_label: str,
+    images_tested: int,
     max_hands: int = 20,
 ) -> None:
     """Scatter plot of the same hands before and after normalization."""
@@ -131,7 +157,10 @@ def plot_before_after(
         ax.set_title(title)
         ax.set_xlabel("x")
         ax.set_ylabel("y")
-    fig.suptitle(f"{dataset_label}: normalization effect on {len(raw_hands)} hands")
+    fig.suptitle(
+        f"{dataset_label}: normalization effect on {len(raw_hands)} hands "
+        f"(from {images_tested} images tested, one colour per hand)"
+    )
     fig.tight_layout()
     fig.savefig(destination, dpi=150)
     plt.close(fig)
@@ -160,7 +189,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def run(args: argparse.Namespace) -> None:
-    """Load the cache and save the three charts."""
+    """Load the cache and save the three charts and the detection table."""
     config = load_config(args.config)
     cache_dir = args.cache_dir or resolve_path(config, "processed_dir")
     out_dir = args.out_dir or resolve_path(config, "figures_dir")
@@ -175,10 +204,11 @@ def run(args: argparse.Namespace) -> None:
     records = load_detections(detections_path)
     with np.load(features_path) as cache:
         features, raw = cache["X"], cache["raw"]
+    images_tested = len(records)
     logger.info(
         "%s: %d images tested, hand found in %d",
         args.dataset_label,
-        len(records),
+        images_tested,
         len(features),
     )
 
@@ -187,15 +217,25 @@ def run(args: argparse.Namespace) -> None:
     plot_detection_rate(
         rates, label_order, out_dir / "detection_rate_per_class.png", args.dataset_label
     )
-    logger.info("Saved detection rate chart")
+    save_detection_table(rates, label_order, out_dir / TABLE_FILE)
+    logger.info("Saved detection rate chart and table")
     if len(features) >= 2:
-        plot_correlation(features, out_dir / "feature_correlation_heatmap.png", args.dataset_label)
+        plot_correlation(
+            features,
+            out_dir / "feature_correlation_heatmap.png",
+            args.dataset_label,
+            images_tested,
+        )
         logger.info("Saved correlation heatmap")
     else:
         logger.warning("Fewer than 2 hands found: correlation heatmap not created")
     if len(features) >= 1:
         plot_before_after(
-            raw, features, out_dir / "normalization_before_after.png", args.dataset_label
+            raw,
+            features,
+            out_dir / "normalization_before_after.png",
+            args.dataset_label,
+            images_tested,
         )
         logger.info("Saved before/after chart")
     else:
