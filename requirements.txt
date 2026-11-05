@@ -1,3 +1,4 @@
+# CNN training and tuning need requirements-ml.txt (CPU PyTorch).
 numpy==2.4.6
 pandas==3.0.6
 pillow==13.0.0
