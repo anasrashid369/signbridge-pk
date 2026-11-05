@@ -1,0 +1,30 @@
+\section{Limitations}
+\label{sec:limitations}
+
+\subsection{The Data Is American Sign Language}
+
+The only large labelled dataset available to the project is the ASL Alphabet dataset. Every reported result in Deliverable~2 therefore describes American Sign Language, not Pakistan Sign Language. The two are different sign languages with different hand shapes, so the trained CNN cannot be used as a PSL recogniser and its scores do not transfer to PSL. The ASL baseline is used to build, train and compare the pipeline, not to make a claim about PSL accuracy.
+
+\subsection{No PSL Photographs}
+
+At the time of writing the team has collected 0 PSL photographs from 0 volunteers. The PSL letter set is also not final: published sources report 34 to 37 letters, and the current label map contains the 26 ASL letters A to Z. A PSL model, a PSL test set and any statement about PSL performance are therefore outside what this deliverable can show.
+
+\subsection{A Subset of the Available Images}
+
+Training does not use all 87{,}000 images of the ASL baseline. The shared split uses a cleaned subset chosen by the data lead, targeting about 400 images per class after near-duplicate removal. This keeps tuning and final training feasible on the available hardware, but it reduces the variety the model sees and makes the results depend on which images were kept.
+
+\subsection{Frames and Signers Are Not Independent}
+
+The ASL baseline consists of video frames. Many images of the same letter are near-identical, and the number of distinct signers behind the dataset has not been verified. The split groups near-duplicate images so that copies of the same frame cannot appear in both training and test, but residual similarity between groups may still make the test set easier than a set of new signers would be. No result in this report should be read as an estimate of performance on unseen people.
+
+\subsection{Small Compute Budget}
+
+All training runs on a CPU. The measured cost is about 3.2 seconds per training batch at $224\times224$ and batch size 32, which puts 10 epochs at roughly 2 hours for 400 images per class and makes a 12-trial search expensive. The search is therefore capped at 12 short trials, and the final model uses 10 to 15 epochs with early stopping. A larger compute budget would allow more trials, more epochs or a larger subset.
+
+\subsection{Static Letters Only}
+
+The system classifies a single image of one hand. It does not use motion, temporal information, two-handed signs, words or sentences, and it does not translate between PSL and text or speech. Letters that require movement are outside its scope.
+
+\subsection{No Demographic Bias Assessment}
+
+The dataset has no demographic labels, and no PSL volunteers were photographed. It is therefore not possible to measure whether the recogniser performs differently across age, gender, skin tone or signing background. The bias discussion in this report is limited to what can be measured without those labels, such as performance by letter and by image brightness or blur, and it cannot support a claim of fairness.
