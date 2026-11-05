@@ -1,0 +1,76 @@
+\section{CNN Architecture and Training}
+\label{sec:cnn}
+
+\subsection{Framework and Model}
+
+The image classifier is implemented in PyTorch with torchvision. The repository pins the CPU builds that were used for development, \texttt{torch 2.15.0+cpu} and \texttt{torchvision 0.29.2+cpu}, in \texttt{requirements-ml.txt}; the same code runs unchanged on a CUDA machine when a GPU build of PyTorch is installed. The base network is torchvision's MobileNetV2. With \texttt{pretrained: true} the weights are loaded from \texttt{MobileNet\_V2\_Weights.IMAGENET1K\_V1}; tests set the flag to false so that no download is needed.
+
+MobileNetV2 is a convolutional network built from inverted residual blocks with depthwise separable convolutions. It was chosen because it is small enough to train and run on a CPU, it is available with ImageNet weights, and its 1{,}280-dimensional final feature vector is a convenient input to a new classifier. The network is used as a feature extractor; only the last part of it is fine-tuned (Section~\ref{sec:cnn-freezing}).
+
+\subsection{Input and Augmentation}
+
+Every image is converted to RGB and resized to $224\times224$ pixels. The training transform then applies a random rotation of at most $10^\circ$ and mild colour jitter (brightness and contrast, each with strength 0.2), converts the image to a tensor and normalises it with the ImageNet mean and standard deviation. The validation and test transforms resize, convert and normalise only, so evaluation is deterministic.
+
+There is deliberately no horizontal flip in the training transform. A mirrored hand is not the same sign: handedness and the direction of the thumb change the meaning of many letters, so a flip would attach a correct label to an incorrect image. The augmentation therefore varies orientation slightly and lighting, but never mirrors the hand.
+
+\subsection{Classifier Head}
+
+The original ImageNet classifier is replaced by
+\begin{equation*}
+  \text{Dropout}(p=0.2) \;\longrightarrow\; \text{Linear}(1280 \rightarrow 26),
+\end{equation*}
+followed by a softmax at inference time. The output is a vector of 26 logits during training and 26 probabilities during evaluation. The dropout probability, the number of classes and the other settings are read from \texttt{configs/cnn.yaml}; no path or hyperparameter is hard-coded in the model.
+
+\subsection{Freezing and Batch Normalisation}
+\label{sec:cnn-freezing}
+
+All parameters of the convolutional feature extractor are frozen first, and the last \texttt{unfreeze\_blocks} entries of \texttt{model.features} are then made trainable. The default is 2, which corresponds to the final residual block (160 to 960 to 320 channels) and the final $1\times1$ projection to 1{,}280 channels. Setting the value to 0 trains the head only, and a value at least as large as the number of feature modules trains the whole backbone.
+
+Batch Normalisation needs separate handling. A BatchNorm layer computes its output from the current batch during training and updates its running mean and variance, but uses the stored statistics during evaluation. If a frozen BatchNorm layer stayed in training mode, its running statistics would keep changing even though its weights do not, so the frozen part of the network would drift. After every call to \texttt{model.train()}, the training code therefore puts every BatchNorm layer that has no trainable parameters back into evaluation mode. BatchNorm layers inside the unfrozen blocks remain in training mode. This keeps the frozen statistics fixed while still allowing the fine-tuned blocks and the head to learn.
+
+\subsection{Loss, Optimiser and Scheduler}
+
+The loss is cross-entropy with label smoothing 0.1. Label smoothing prevents the model from becoming over-confident on the training set and is a standard regulariser for image classification.
+
+The optimiser is AdamW with two parameter groups. The new classifier head uses the learning rate from the configuration, 0.001 by default, and the trainable part of the backbone uses that rate multiplied by \texttt{backbone\_lr\_mult}, 0.1 by default. Fine-tuning a pretrained backbone at a smaller rate than a randomly initialised head is the usual practice: the pretrained filters already carry useful features and should not be overwritten by large early updates. Weight decay is 0.0001.
+
+The learning-rate scheduler is selected in the configuration. \texttt{cosine} uses \texttt{CosineAnnealingLR} with the number of epochs as its period; \texttt{step} uses \texttt{StepLR} with a step size of one third of the run and a factor of 0.1. The current configuration uses cosine annealing. The scheduler is stepped once per epoch, after validation.
+
+\subsection{Early Stopping and Checkpoint Selection}
+
+The model is evaluated on the validation split after every epoch. The checkpoint with the highest validation macro-F1 is kept; ties keep the earlier checkpoint. Training stops when the validation macro-F1 has not improved for \texttt{patience} consecutive epochs, 3 in the current configuration. The test split is not used for any of these decisions; it is read only when the explicit \texttt{-{}-evaluate-test} flag is passed, once, after the hyperparameters are frozen.
+
+Macro-F1 is used rather than accuracy because it gives every letter the same weight. The ASL baseline is balanced, so accuracy would not be misleading there, but macro-F1 keeps the selection rule meaningful if the cleaned subset or the later PSL data is not perfectly balanced.
+
+\subsection{Architecture Diagram}
+
+Figure~\ref{fig:cnn-architecture} shows the data flow. The first part of the feature extractor is frozen and its BatchNorm statistics are held fixed. The last two feature modules are fine-tuned with the smaller backbone learning rate. Global average pooling produces a 1{,}280-dimensional vector, which passes through dropout and a linear layer to 26 logits and then a softmax.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  node distance=5mm,
+  box/.style={draw, rounded corners, align=center, font=\small,
+              minimum width=8.2cm, minimum height=9mm},
+  frozen/.style={box, fill=gray!12},
+  trainable/.style={box, fill=blue!8},
+  head/.style={box, fill=orange!10},
+  >=latex
+]
+\node[box] (input) {Input image: $224\times224\times3$, RGB, ImageNet normalisation};
+\node[frozen, below=of input] (frozen) {Frozen features: first 17 of 19 modules\\BatchNorm kept in evaluation mode};
+\node[trainable, below=of frozen] (tuned) {Trainable features: last 2 modules (160$\to$960$\to$320, then $320\to$1280)\\backbone learning rate};
+\node[box, below=of tuned] (pool) {Global average pooling: 1{,}280 features};
+\node[head, below=of pool] (dropout) {Dropout ($p=0.2$)};
+\node[head, below=of dropout] (linear) {Linear ($1280\to26$)};
+\node[head, below=of linear] (softmax) {Softmax: 26 letter probabilities};
+\draw[->] (input) -- (frozen);
+\draw[->] (frozen) -- (tuned);
+\draw[->] (tuned) -- (pool);
+\draw[->] (pool) -- (dropout);
+\draw[->] (dropout) -- (linear);
+\draw[->] (linear) -- (softmax);
+\end{tikzpicture}
+\caption{Data flow of the MobileNetV2 classifier. The grey block is frozen, the blue block is fine-tuned, and the orange blocks form the new classifier head. The diagram shows the default \texttt{unfreeze\_blocks: 2}; a value of 0 freezes the whole blue block and a larger value unfreezes more modules.}
+\label{fig:cnn-architecture}
+\end{figure}
