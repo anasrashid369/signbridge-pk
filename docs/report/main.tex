@@ -8,8 +8,11 @@
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{booktabs}
+\usepackage{amsmath}
 \usepackage{enumitem}
 \usepackage{url}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
 \usepackage[hidelinks]{hyperref}
 
 \newcommand{\figdir}{../../reports/figures/}
@@ -47,6 +50,8 @@
   {\Large Real-time Pakistan Sign Language Alphabet Recognizer\par}
   \vspace{1.5cm}
   {\large Deliverable 1: Problem Definition and Data Acquisition\par}
+  \vspace{0.3cm}
+  {\large Deliverable 2: Models, Training and Evaluation\par}
   \vspace{2.5cm}
   {\large\bfseries Team\par}
   \vspace{0.4cm}
@@ -63,6 +68,8 @@
 \clearpage
 \pagenumbering{arabic}
 
+\part{Deliverable 1: Problem Definition and Data Acquisition}
+
 \input{sections/problem_statement}
 \input{sections/target_audience}
 \input{sections/ai_justification}
@@ -71,6 +78,20 @@
 \input{sections/feature_strategy}
 \input{sections/eda}
 \input{sections/challenges}
+
+\part{Deliverable 2: Models, Training and Evaluation}
+
+\input{sections/phase3_cnn}
+\input{sections/phase3_landmark}
+\input{sections/cnn_hyperparameters}
+\input{sections/landmark_hyperparameters}
+\input{sections/validation_strategy}
+\input{sections/metric_analysis}
+\input{sections/results}
+\input{sections/error_analysis}
+\input{sections/bias_check}
+\input{sections/limitations}
+\input{sections/contributions}
 
 \bibliographystyle{plain}
 \begingroup
