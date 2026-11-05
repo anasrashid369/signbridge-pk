@@ -1,0 +1,51 @@
+# Settings for the MobileNetV2 CNN (Deliverable 2, Anas).
+# Paths are relative to the repository root. Change keys here, not in code.
+
+seed: 42                                  # seed for Python, NumPy and PyTorch
+
+data:
+  split_file: data/processed/split_v1.csv # shared split contract: path,label,group_id,split
+  image_root: data/raw/asl_alphabet/asl_alphabet_train/asl_alphabet_train
+                                          # folder that the split path column is relative to
+  label_map: data/processed/label_map.json # class name to index, 26 letters A-Z
+  image_size: 224                         # side length in pixels after resizing (MobileNetV2 input)
+  columns:                                # names of the split CSV columns to read
+    path: path                            # image path relative to image_root, for example A/A1.jpg
+    label: label                          # class name, for example A
+    split: split                           # one of train, val, test
+    group_id: group_id                    # near-duplicate group id (kept for audit; not used by CNN)
+
+model:
+  num_classes: 26                         # A-Z only
+  pretrained: true                        # load ImageNet weights (false in tests, so nothing is downloaded)
+  dropout: 0.2                            # dropout probability before the final linear layer
+  unfreeze_blocks: 2                      # last N modules of model.features to train; 0 = head only
+
+train:
+  epochs: 12                              # final run: 10-15 epochs with early stopping
+  batch_size: 32                          # images per batch
+  lr: 0.001                               # learning rate for the new classifier head
+  backbone_lr_mult: 0.1                   # backbone learning rate = lr times this value
+  weight_decay: 0.0001                    # AdamW weight decay
+  label_smoothing: 0.1                    # CrossEntropyLoss label smoothing
+  scheduler: cosine                       # cosine or step
+  patience: 3                             # early-stopping patience on validation macro-F1
+  num_workers: 0                          # 0 is the safe default on Windows
+
+outputs:
+  checkpoint: models/cnn_best.pt          # best checkpoint by validation macro-F1 (gitignored)
+  history_csv: reports/training/cnn_history.csv
+                                          # per-epoch loss and accuracy numbers (curves)
+  predictions_dir: reports/predictions    # <model>_<split>.npz files
+  trials_csv: reports/tuning/cnn_trials.csv
+                                          # one row per tuning trial
+
+tuning:
+  epochs: 3                               # short epochs per trial (3-5)
+  max_trials: 12                          # hard cap from the team plan
+  grid:                                   # values tried by tune_cnn.py (cartesian product, capped)
+    lr: [0.0003, 0.001]
+    batch_size: [32, 64]
+    dropout: [0.2, 0.4]
+    weight_decay: [0.0001, 0.001]
+    unfreeze_blocks: [0, 2]
