@@ -32,6 +32,10 @@ data/interim/
 data/processed/*
 !data/processed/manifest.csv
 !data/processed/label_map.json
+!data/processed/split_v1.csv
+
+# Tuning and scratch prediction files (final val/test predictions are committed)
+reports/predictions/runs/
 
 # Model weights (large binaries; the guide allows only a small final model, kept out of Git)
 *.pt
