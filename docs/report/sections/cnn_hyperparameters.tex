@@ -1,0 +1,47 @@
+\section{CNN Hyperparameter Search}
+\label{sec:cnn-hyperparameters}
+
+\subsection{Search Space}
+
+The tuning grid is stored in \texttt{configs/cnn.yaml} and read by \texttt{python -m signbridge.tune\_cnn}. Five hyperparameters are varied: the head learning rate, the batch size, the dropout probability, the AdamW weight decay and the number of unfrozen feature modules. The grid in Table~\ref{tab:cnn-search-space} contains $2^5=32$ combinations. Training is capped at 12 trials, and each trial runs for 3 epochs. The 12 trials are a seeded random sample, not the first 12 rows of the grid: \texttt{random.Random} with the config seed (42) shuffles all 32 combinations, duplicate combinations are removed, and the search walks that shuffled order from the start and runs at most 12 trials. A position whose parameter set and seed are already in the trials file is skipped, so an interrupted search fills the remaining budget in the same order instead of starting a new search. Early stopping is configured with patience 3, so it does not trigger inside a 3-epoch trial. These short trials are intended to rank configurations, not to produce the final model.
+
+\begin{table}[htbp]
+\centering
+\caption{CNN hyperparameter search space in \texttt{configs/cnn.yaml}.}
+\label{tab:cnn-search-space}
+\begin{tabular}{lll}
+\toprule
+Hyperparameter & Values & Role \\
+\midrule
+Head learning rate & $3\times10^{-4}$, $1\times10^{-3}$ & step size for the new classifier \\
+Batch size & 32, 64 & images per optimisation step \\
+Dropout & 0.2, 0.4 & regularisation before the linear layer \\
+Weight decay & $1\times10^{-4}$, $1\times10^{-3}$ & AdamW regularisation \\
+Unfrozen blocks & 0, 2 & last feature modules trained \\
+\midrule
+Trials & at most 12 of 32 & seeded random sample, hard cap \\
+Epochs per trial & 3 & short ranking runs \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The remaining settings are fixed during tuning: 26 classes, ImageNet-pretrained MobileNetV2, $224\times224$ input, cross-entropy with label smoothing 0.1, AdamW with a backbone learning rate multiplier of 0.1, cosine annealing, early-stopping patience 3 and seed 42. The final run uses the same configuration with 10 to 15 epochs and early stopping.
+
+\subsection{Selection Rule}
+
+A trial is ranked by its best validation macro-F1. Ties are broken in favour of the trial with fewer trainable parameters, because a smaller model is cheaper to train and to run and is less likely to overfit. The rule is written in the docstring of \texttt{tune\_cnn.py} and in \texttt{DECISIONS.md}. The test split is never read during tuning. Each trial appends one row to \texttt{reports/tuning/cnn\_trials.csv}; a parameter set and seed that already appear in that file are skipped, so an interrupted search can be resumed without repeating work.
+
+\subsection{Trial Results}
+
+\IfFileExists{../../reports/tuning/cnn_trials_table.tex}{%
+  \begin{table}[htbp]
+  \centering
+  \caption{Tuning trials for the CNN, ordered as recorded. The table is generated from \texttt{reports/tuning/cnn\_trials.csv} by \texttt{tools/trials\_to\_tex.py}.}
+  \label{tab:cnn-trials}
+  \resizebox{\linewidth}{!}{\input{../../reports/tuning/cnn_trials_table.tex}}
+  \end{table}
+}{%
+  \todobox{The CNN trial table is missing. It will be generated from \texttt{reports/tuning/cnn\_trials.csv} by \texttt{tools/trials\_to\_tex.py} after the real tuning runs on the shared split.}
+}
+
+\todobox{Justification of the final chosen hyperparameters, to be written after the real tuning runs and after the best trial is known.}
