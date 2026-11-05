@@ -8,7 +8,7 @@ People who sign in PSL and people who do not know it often have no shared langua
 
 ## Status
 
-Deliverable 1 (Problem Definition and Data Acquisition) is complete for the ASL baseline: download, cleaning, raw-data charts, landmark extraction and feature charts all run on it. PSL photo collection has not started yet (0 volunteers, 0 photos); it continues in Deliverable 2, where the PSL letter set is also fixed from a cited source. Models arrive in Deliverable 2 and the app in Deliverable 3.
+Deliverable 1 (Problem Definition and Data Acquisition) is complete for the ASL baseline: download, cleaning, raw-data charts, landmark extraction and feature charts all run on it. PSL photo collection has not started yet (0 volunteers, 0 photos); it continues in Deliverable 2, where the PSL letter set is also fixed from a cited source. Deliverable 2 adds the MobileNetV2 CNN, the split-driven image dataset, training and tuning commands, and the Contribution Table tooling. Real CNN runs wait for the shared split file from the data lead. The app arrives in Deliverable 3.
 
 ## Repository Layout
 
@@ -21,7 +21,15 @@ signbridge-pk/
 │   ├── eda/                         # raw-data and feature charts
 │   └── features/                    # landmark extraction, normalisation, images, labels
 ├── src/signbridge/                  # Shared library: config loader, logging setup
+│   ├── data/                        # split-driven dataset and image transforms
+│   ├── models/                      # MobileNetV2 wrapper and landmark models
+│   ├── training/                    # loops, prediction files and trial logging
+│   ├── train_cnn.py                 # CNN training command
+│   └── tune_cnn.py                  # CNN hyperparameter search command
 ├── configs/data.yaml                # All paths, thresholds and seeds
+├── configs/cnn.yaml                 # CNN data, model, training and tuning settings
+├── configs/modules.yaml             # module owners and path globs for the Contribution Table
+├── tools/                           # subset packer, contribution table, trials to LaTeX
 ├── tests/                           # pytest suite
 ├── docs/
 │   ├── data_collection_protocol.md  # PSL collection protocol and consent note
@@ -31,13 +39,13 @@ signbridge-pk/
 │   ├── cleaning_summary.csv         # image counts per class after each cleaning step
 │   └── cleaning_summary_table.tex   # the same counts as a table for the report
 ├── data/                            # raw/ and interim/ are not in Git
-│   └── processed/                   # only label_map.json (and later manifest.csv) are committed
+│   └── processed/                   # label_map.json, split_v1.csv and manifest.csv are committed
 ├── models/                          # hand landmarker model and later checkpoints (not in Git)
 ├── app/                             # app (Deliverable 3)
 ├── notebooks/                       # exploration only
 ├── requirements.txt                 # runtime dependencies for Deliverable 1
 ├── requirements-dev.txt             # runtime plus pytest and ruff
-├── requirements-ml.txt              # app dependencies for later deliverables
+├── requirements-ml.txt              # CNN dependencies, including CPU PyTorch
 └── pyproject.toml                   # project metadata and tool settings
 ```
 
@@ -66,6 +74,8 @@ Check the setup:
 ruff check .
 pytest
 ```
+
+Most tests use only the Deliverable 1 dependencies. Every test module that needs PyTorch starts with `pytest.importorskip("torch")`, so `pytest` also passes in CI, where torch is not installed. Install `requirements-ml.txt` and run `pytest` locally to include the CNN tests.
 
 ## Data
 
@@ -144,9 +154,109 @@ Needs PSL photos in `data/raw/psl`, named `{person_id}_{label}_{lighting}_{backg
 python -m data_scripts.build_manifest            # writes data/processed/manifest.csv
 ```
 
+## Deliverable 2: CNN Training
+
+The image classifier is MobileNetV2 from torchvision with a new dropout and linear head for the 26 ASL letters. All settings live in `configs/cnn.yaml`; paths are relative to the repository root. Training runs on CUDA when PyTorch reports a GPU, otherwise on the CPU.
+
+Install the CNN dependencies once:
+
+```bash
+pip install -r requirements-ml.txt
+```
+
+That file includes the Deliverable 1 runtime and the pinned CPU builds of PyTorch and torchvision, so the command works on its own. Gradio is not part of this install; it returns with the Deliverable 3 app.
+
+The committed split contract is `data/processed/split_v1.csv`, with columns `path`, `label`, `group_id` and `split`. The `path` column is relative to the image root, for example `A/A123.jpg`; `split` is one of `train`, `val` and `test`; and class indices come from `data/processed/label_map.json`. The dataset only reads the split it is asked for.
+
+### Train the model
+
+```bash
+python -m signbridge.train_cnn --config configs/cnn.yaml
+```
+
+The default run writes a per-epoch history CSV with training and validation loss, accuracy, macro-F1, learning rate and seconds, keeps the checkpoint with the best validation macro-F1, and writes validation predictions. The checkpoint, history and prediction locations are set in `configs/cnn.yaml`:
+
+- `models/cnn_best.pt` (gitignored)
+- `reports/training/cnn_history.csv`
+- `reports/predictions/cnn_val.npz`
+
+Useful overrides are `--split-file`, `--image-root`, `--epochs`, `--batch-size`, `--run-name`, `--max-batches` and `--max-per-class`. A smoke test on a few batches proves that the pipeline runs end to end:
+
+```bash
+python -m signbridge.train_cnn --config configs/cnn.yaml --split-file PATH/TO/split.csv --image-root PATH/TO/images --epochs 1 --max-batches 5 --run-name smoke
+```
+
+`--max-per-class N` caps only the training split at `N` images per class. The sample is drawn per class with the config seed, and validation and test are left complete, so scores stay comparable between a capped run and a full run. Use it when CPU time is short, for example `--max-per-class 200`. A run name other than `cnn` writes `<run-name>.pt`, `<run-name>.csv` and `<run-name>_val.npz` next to the default outputs.
+
+### Tune the hyperparameters
+
+```bash
+python -m signbridge.tune_cnn --config configs/cnn.yaml
+```
+
+The grid in `configs/cnn.yaml` has five hyperparameters, giving 32 combinations. `tune_cnn.py` shuffles that list with `random.Random(seed)` (seed 42 from the config), removes duplicate combinations, then walks the shuffled order from the start and runs at most 12 trials. A position whose parameter set and seed are already recorded in the trials CSV is skipped, so an interrupted search fills the remaining budget in the same order instead of starting a new search. Each trial runs for 3 epochs by default and appends one row to `reports/tuning/cnn_trials.csv`. Trials are ranked by validation macro-F1; ties go to the trial with fewer trainable parameters. Trial predictions are written to `reports/predictions/runs/`, which is gitignored. Use `--epochs`, `--max-trials`, `--max-batches`, `--max-per-class`, `--split-file` and `--image-root` to shorten or redirect a search. `--max-per-class` applies the same seeded training-only cap as in `train_cnn`.
+
+After the search, turn the trials CSV into the LaTeX table used by the report:
+
+```bash
+python -m tools.trials_to_tex --csv reports/tuning/cnn_trials.csv
+```
+
+### Test-set rule
+
+The test split is never read during training, tuning or model selection. It is evaluated only when the explicit flag is passed:
+
+```bash
+python -m signbridge.train_cnn --config configs/cnn.yaml --evaluate-test
+```
+
+Run that command once, after the hyperparameters are frozen. It writes `reports/predictions/<run-name>_test.npz` and logs a warning. Every prediction file has the same four arrays: `y_true` (class indices), `y_proba` (an `n` by 26 matrix of softmax probabilities), `paths` (the split paths in order) and `class_names` (the class names in index order). The committed validation and test files are the inputs to the evaluation module.
+
+### Package a subset for Colab or Kaggle
+
+Only the images named in the split file are needed on the remote machine. This command writes a zip outside the repository by default path choice; the `<class>/<file>` structure is preserved:
+
+```bash
+python -m tools.pack_subset --split-file data/processed/split_v1.csv --image-root PATH/TO/images --output PATH/TO/subset.zip --splits train val test
+```
+
+`--splits` can be any non-empty subset of `train val test`. The subset is enough because the split file stores paths relative to the image root.
+
+### Colab or Kaggle recipe
+
+Run these commands from a fresh runtime. No notebook is needed. The pinned requirements install the CPU build of PyTorch, which is what the reported CPU timings use. If the runtime has a GPU and you want to use it, install the matching GPU build of torch and torchvision from the PyTorch website after the requirements step; the training command is unchanged and selects CUDA automatically when `torch.cuda.is_available()` is true.
+
+```bash
+git clone REPOSITORY_URL signbridge-pk
+cd signbridge-pk
+pip install -r requirements-ml.txt
+pip install -e .
+unzip PATH/TO/subset.zip -d data/raw/asl_subset
+python -m signbridge.train_cnn --config configs/cnn.yaml --split-file data/processed/split_v1.csv --image-root data/raw/asl_subset
+python -m signbridge.train_cnn --config configs/cnn.yaml --split-file data/processed/split_v1.csv --image-root data/raw/asl_subset --evaluate-test
+```
+
+Upload the subset zip to the runtime, or download it from the project's external storage, and replace the paths with the ones on that machine. The split file and `label_map.json` come from the repository; the raw images do not.
+
+### Contribution table
+
+```bash
+python -m tools.contribution_table
+```
+
+This reads `configs/modules.yaml`, counts non-merge commits per author for every module with `git log --use-mailmap --no-merges` on `main`, and writes `reports/contribution_table.csv` and `reports/contribution_table.tex`. Commits that exist only on unmerged branches are not reachable from `main` and are not counted. Author aliases are grouped through `.mailmap`.
+
+### Model weights
+
+The trained checkpoint is not committed because it is a binary file. It is hosted externally:
+
+**Weights link (placeholder):** _TODO: replace this line with the Google Drive link after uploading `cnn_best.pt`._
+
+Download the file, place it at `models/cnn_best.pt`, and use `torch.load` with the same model definition from `signbridge.models.cnn`. Never invent or commit the link.
+
 ## Coming in Later Deliverables
 
-- PSL letter set from a cited source, PSL photo collection, classifiers and MobileNetV2 training (Deliverable 2)
+- PSL photo collection and a PSL letter set confirmed from a cited source and with a PSL user
 - App for webcam capture, top-3 predictions and landmark overlay (Deliverable 3)
 
 ## Team
