@@ -1,0 +1,96 @@
+# Module ownership for the Contribution Table (tools/contribution_table.py).
+# Each module has one owner and one or more path globs. Commits are counted with
+# git log --use-mailmap --no-merges over the paths, reachable from main only.
+
+modules:
+  shared_config:
+    owner: Anas
+    paths:
+      - src/signbridge/config.py
+      - src/signbridge/logging_setup.py
+
+  download:
+    owner: Anas
+    paths:
+      - data_scripts/download_data.py
+
+  cleaning:
+    owner: Aliza
+    paths:
+      - data_scripts/clean/**
+
+  raw_eda:
+    owner: Aliza
+    paths:
+      - data_scripts/eda/raw_data_eda.py
+
+  landmarks:
+    owner: Fatima
+    paths:
+      - data_scripts/features/extract.py
+      - data_scripts/features/landmarks.py
+      - data_scripts/eda/feature_eda.py
+
+  labels_and_images:
+    owner: Fatima
+    paths:
+      - data_scripts/features/labels.py
+      - data_scripts/features/images.py
+
+  manifest:
+    owner: Aliza
+    paths:
+      - data_scripts/build_manifest.py
+
+  splits:
+    owner: Aliza
+    paths:
+      - src/signbridge/data/splits.py
+
+  evaluation:
+    owner: Aliza
+    paths:
+      - src/signbridge/evaluation/**
+
+  landmark_models:
+    owner: Fatima
+    paths:
+      - src/signbridge/models/landmark_models.py
+      - src/signbridge/train_landmark.py
+      - configs/landmark.yaml
+
+  cnn_model:
+    owner: Anas
+    paths:
+      - src/signbridge/models/cnn.py
+      - src/signbridge/data/image_dataset.py
+      - src/signbridge/data/transforms.py
+      - configs/cnn.yaml
+
+  cnn_training:
+    owner: Anas
+    paths:
+      - src/signbridge/training/**
+      - src/signbridge/train_cnn.py
+
+  cnn_tuning:
+    owner: Anas
+    paths:
+      - src/signbridge/tune_cnn.py
+
+  tools:
+    owner: Anas
+    paths:
+      - tools/**
+      - configs/modules.yaml
+
+  report:
+    owner: Anas
+    paths:
+      - docs/report/**
+      - reports/**
+
+  tests:
+    owner: Shared
+    paths:
+      - tests/**
