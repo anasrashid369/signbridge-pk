@@ -4,11 +4,16 @@ pytest.importorskip("torch")
 pytest.importorskip("sklearn")
 
 import numpy as np  # noqa: E402
+import torch  # noqa: E402
 
 from signbridge.models.landmark_models import (  # noqa: E402
+    LandmarkMLP,
     build_forest,
     build_svm,
+    fit_mlp,
     full_proba,
+    predict_proba_mlp,
+    write_history_csv,
 )
 
 
@@ -34,3 +39,37 @@ def test_sklearn_models_give_valid_probabilities(builder):
 def test_svm_learns_toy_problem():
     X, y = toy_data()
     assert build_svm().fit(X, y).score(X, y) > 0.95
+
+
+def test_mlp_output_shape():
+    model = LandmarkMLP(input_dim=63, n_classes=26)
+    assert model(torch.zeros(5, 63)).shape == (5, 26)
+
+
+def test_mlp_trains_and_records_history(tmp_path):
+    X, y = toy_data(per_class=40)
+    model = LandmarkMLP(input_dim=63, n_classes=3, hidden_size=16, n_hidden_layers=1,
+                        dropout=0.1)
+    history = fit_mlp(model, X, y, X, y, epochs=15, patience=15, batch_size=32)
+    assert len(history) == 15
+    assert set(history[0]) == {
+        "epoch", "train_loss", "train_acc", "val_loss", "val_acc", "val_macro_f1",
+    }
+    assert history[-1]["train_loss"] < history[0]["train_loss"]
+    proba = predict_proba_mlp(model, X)
+    assert np.allclose(proba.sum(axis=1), 1.0, atol=1e-5)
+
+    out = tmp_path / "hist.csv"
+    write_history_csv(history, out)
+    assert out.read_text().startswith("epoch,train_loss")
+
+
+def test_mlp_training_is_reproducible():
+    X, y = toy_data(per_class=40)
+    losses = []
+    for _ in range(2):
+        torch.manual_seed(0)
+        m = LandmarkMLP(input_dim=63, n_classes=3, hidden_size=16, n_hidden_layers=1)
+        h = fit_mlp(m, X, y, X, y, epochs=3, patience=3, seed=7)
+        losses.append(h[-1]["train_loss"])
+    assert losses[0] == pytest.approx(losses[1])
