@@ -43,6 +43,9 @@ tuning:
   mlp_weight_decay: [0.0, 0.0001, 0.001]
 
 # --- Outputs -----------------------------------------------------------
+# --- Outputs -----------------------------------------------------------
 output:
-  history_csv: reports/tuning/mlp_history.csv      # per-epoch loss/accuracy for the curves
-  model_dir: models/landmark                       # saved models (NOT committed; models/ is ignored)
+  predictions_dir: reports/predictions             # FINAL val/test prediction files (committed)
+  runs_dir: reports/predictions/runs               # scratch and tuning runs (ignored by Git)
+  history_csv: reports/tuning/mlp_history.csv      # per-epoch loss/accuracy of the final MLP run
+  model_dir: models/landmark                       # saved models (NOT committed)
