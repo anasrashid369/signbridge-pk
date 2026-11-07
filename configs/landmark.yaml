@@ -1,0 +1,48 @@
+# configs/landmark.yaml
+# Settings for the landmark models (SVM, Random Forest, MLP).
+# Seeds, the split file, the label map and data paths come from configs/data.yaml.
+# All paths below are relative to the repository root.
+
+# --- Input -------------------------------------------------------------
+input_dim: 63                 # 21 landmarks x (x, y, z), normalised by the wrist
+n_classes: 26                 # A-Z, class order from data/processed/label_map.json
+
+# --- SVM ---------------------------------------------------------------
+svm:
+  C: 10.0                     # regularisation: larger C fits the training data harder
+  gamma: scale                # RBF kernel width: "scale" or a positive number
+  # probability=True is fixed in code so AUC-ROC can be computed
+
+# --- Random Forest -----------------------------------------------------
+forest:
+  n_estimators: 300           # number of trees
+  max_depth: null             # null = grow until pure; an integer limits overfitting
+
+# --- MLP (PyTorch) -----------------------------------------------------
+mlp:
+  hidden_size: 128            # units in each hidden layer
+  n_hidden_layers: 2          # number of hidden layers
+  dropout: 0.3                # dropout probability after each hidden layer
+  learning_rate: 0.001        # AdamW learning rate
+  weight_decay: 0.0001        # AdamW weight decay
+  batch_size: 64              # samples per gradient step
+  epochs: 100                 # upper limit; early stopping usually ends sooner
+  patience: 10                # stop after this many epochs without validation macro-F1 gain
+
+# --- Tuning (validation split ONLY, never the test split) ---------------
+tuning:
+  trials_csv: reports/tuning/landmark_trials.csv   # one row per trial
+  svm_C: [0.1, 1, 10, 100]
+  svm_gamma: [scale, 0.01, 0.1, 1]
+  forest_n_estimators: [100, 300, 500]
+  forest_max_depth: [null, 10, 20]
+  mlp_learning_rate: [0.0003, 0.001, 0.003]
+  mlp_batch_size: [32, 64, 128]
+  mlp_dropout: [0.1, 0.3, 0.5]
+  mlp_hidden_size: [64, 128, 256]
+  mlp_weight_decay: [0.0, 0.0001, 0.001]
+
+# --- Outputs -----------------------------------------------------------
+output:
+  history_csv: reports/tuning/mlp_history.csv      # per-epoch loss/accuracy for the curves
+  model_dir: models/landmark                       # saved models (NOT committed; models/ is ignored)
