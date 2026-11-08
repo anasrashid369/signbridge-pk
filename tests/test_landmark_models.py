@@ -5,6 +5,7 @@ pytest.importorskip("sklearn")
 
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
+from sklearn.calibration import CalibratedClassifierCV  # noqa: E402
 
 from signbridge.models.landmark_models import (  # noqa: E402
     LandmarkMLP,
@@ -73,3 +74,11 @@ def test_mlp_training_is_reproducible():
         h = fit_mlp(m, X, y, X, y, epochs=3, patience=3, seed=7)
         losses.append(h[-1]["train_loss"])
     assert losses[0] == pytest.approx(losses[1])
+
+
+def test_svm_uses_calibration_not_the_deprecated_probability_flag():
+    calibrated = build_svm().steps[-1][1]
+
+    assert isinstance(calibrated, CalibratedClassifierCV)
+    assert calibrated.estimator.probability is not True
+    assert calibrated.ensemble is False
