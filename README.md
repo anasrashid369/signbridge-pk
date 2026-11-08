@@ -176,6 +176,31 @@ python -m tools.check_split --split-file data/processed/split_v1.csv --image-roo
 
 It prints the counts and every problem, and exits non-zero when the file does not match the contract. Pass `--tolerance` and `--class-tolerance` only if the team agrees to different limits.
 
+### Rebuild the split file
+
+`data/processed/split_v1.csv` was built from the full ASL download (3,000 images per letter, `data/raw/asl_alphabet`) in two steps, both run from the repository root. Repeat them only to reproduce the file; the committed file is the one every model must use.
+
+```bash
+python -m data_scripts.build_split_pool
+python -m signbridge.data.splits
+```
+
+The first command cleans one letter at a time: it drops unreadable images, quality failures, exact duplicates and near-duplicates, puts the remaining images into groups of look-alikes, and samples up to `images_per_class` images per letter. It writes the pool to `data/interim/split_pool.csv` (not committed) and, for every letter, how many images each step removed to `reports/split_pool_summary.csv` (committed). `--classes A B` runs only those letters and replaces only their rows. The whole run takes from a few minutes to about half an hour, depending on the computer.
+
+The second command assigns whole groups to train, validation and test inside each letter, so no group is split across sets, and writes `data/processed/split_v1.csv`. It stops with an error if a group ends up in two splits.
+
+The settings are in `configs/data.yaml`, section `split`, plus the top-level `seed`:
+
+| Key | Value | Meaning |
+|---|---|---|
+| `images_per_class` | 400 | Images kept per letter after cleaning, drawn at random with the seed |
+| `near_duplicate_distance` | 3 | Two images of a letter whose 64-bit hashes differ in at most this many bits are near-duplicates; only the first is kept. Used by the split pool only; `quality.near_duplicate_distance` is the Deliverable 1 setting |
+| `group_method` | leader | `leader`: an image joins the closest earlier group leader, so groups stay small. `chain`: images linked through other images share a group, which merges a whole run of frames into one group |
+| `group_distance` | 10 | Largest hash distance (in bits) at which an image joins a group |
+| `train_fraction`, `val_fraction`, `test_fraction` | 0.70, 0.15, 0.15 | Share of each letter in each split |
+
+The committed file has 10,400 images, 400 per letter, split 280 / 60 / 60 per letter (7,280 / 1,560 / 1,560 in total). It holds 2,128 groups: 1,192 in train, 459 in validation and 477 in test. Grouping by image hash reduces leakage between the splits but cannot remove it, because the ASL images have no signer labels.
+
 ### Check the GPU and estimate the run time
 
 ```bash
