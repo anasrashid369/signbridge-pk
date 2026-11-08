@@ -212,6 +212,11 @@ def run(args: argparse.Namespace) -> dict[str, dict[str, float]]:
         raise ValueError(
             "--evaluate-test needs --final: test files are written once, to the final folder"
         )
+    if args.evaluate_test:
+        logger.warning(
+            "--evaluate-test is enabled. The test split should only be evaluated "
+            "once, after hyperparameters have been frozen."
+        )
     data_config = load_config(args.data_config)
     config = load_config(args.config)
     seed = int(data_config["seed"])
