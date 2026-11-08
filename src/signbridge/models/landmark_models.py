@@ -23,7 +23,6 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from signbridge.training.loop import set_seed
 
-
 # ---------------------------------------------------------------------------
 # Classical baselines
 # ---------------------------------------------------------------------------
