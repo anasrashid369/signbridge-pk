@@ -46,6 +46,31 @@ def test_training_changes_the_loss() -> None:
     assert after != before
 
 
+def test_frozen_batchnorm_stays_in_eval_during_training() -> None:
+    model = nn.Sequential(
+        nn.Conv2d(3, 2, 1),
+        nn.BatchNorm2d(2),
+        nn.Flatten(),
+        nn.Linear(2 * 4 * 4, 2),
+    )
+    for parameter in model[0].parameters():
+        parameter.requires_grad = False
+    for parameter in model[1].parameters():
+        parameter.requires_grad = False
+    optimizer = torch.optim.SGD(
+        [parameter for parameter in model.parameters() if parameter.requires_grad], lr=0.1
+    )
+    train_one_epoch(
+        model,
+        make_loader(),
+        nn.CrossEntropyLoss(),
+        optimizer,
+        torch.device("cpu"),
+        freeze_batchnorm=True,
+    )
+    assert model[1].training is False
+
+
 def test_evaluate_returns_probabilities_and_macro_f1() -> None:
     set_seed(3)
     model = TinyNet()

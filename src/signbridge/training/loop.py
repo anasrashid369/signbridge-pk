@@ -53,9 +53,26 @@ def train_one_epoch(
     optimizer: torch.optim.Optimizer,
     device: torch.device,
     max_batches: int | None = None,
+    freeze_batchnorm: bool = False,
 ) -> tuple[float, float]:
-    """Train for one epoch and return mean loss and accuracy."""
+    """Train for one epoch and return mean loss and accuracy.
+
+    Args:
+        model: Network to train.
+        loader: Batches of ``(images, labels)``.
+        criterion: Loss function.
+        optimizer: Optimiser stepped after every batch.
+        device: Device that the batches and the model live on.
+        max_batches: Optional cap on the number of batches.
+        freeze_batchnorm: Put BatchNorm layers without trainable parameters
+            back into evaluation mode after ``model.train()``. The CNN uses
+            this so frozen running statistics do not drift.
+    """
     model.train()
+    if freeze_batchnorm:
+        from signbridge.models.cnn import set_frozen_batchnorm_eval
+
+        set_frozen_batchnorm_eval(model)
     total_loss = 0.0
     correct = 0
     total = 0

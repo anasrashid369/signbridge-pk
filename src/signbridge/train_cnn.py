@@ -22,11 +22,7 @@ from torch.utils.data import DataLoader
 from signbridge.config import REPO_ROOT, load_config
 from signbridge.data.image_dataset import SplitImageDataset
 from signbridge.data.transforms import build_eval_transform, build_train_transform
-from signbridge.models.cnn import (
-    build_mobilenet_v2,
-    count_trainable_parameters,
-    set_frozen_batchnorm_eval,
-)
+from signbridge.models.cnn import build_mobilenet_v2, count_trainable_parameters
 from signbridge.training.loop import (
     evaluate_epoch,
     select_device,
@@ -261,10 +257,14 @@ def train(config: dict, options: SimpleNamespace) -> dict[str, object]:
     start = time.perf_counter()
     for epoch in range(1, epochs + 1):
         epoch_start = time.perf_counter()
-        model.train()
-        set_frozen_batchnorm_eval(model)
         train_loss, train_acc = train_one_epoch(
-            model, train_loader, criterion, optimizer, device, options.max_batches
+            model,
+            train_loader,
+            criterion,
+            optimizer,
+            device,
+            options.max_batches,
+            freeze_batchnorm=True,
         )
         val = evaluate_epoch(model, val_loader, criterion, device, options.max_batches)
         learning_rate = optimizer.param_groups[0]["lr"]
