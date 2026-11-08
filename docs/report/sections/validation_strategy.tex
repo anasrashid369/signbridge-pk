@@ -1,4 +1,58 @@
 \section{Validation Strategy}
 \label{sec:validation}
 
-\todobox{Aliza: describe how the grouped 70/15/15 split in \texttt{data/processed/split\_v1.csv} was built, how near-duplicates were grouped, why whole groups are kept in one split, and how the test set is protected.}
+All models in Deliverable~2 are trained and evaluated on the ASL baseline, the 26 letters A to Z of the Kaggle ASL Alphabet training folder, because we have no PSL photos yet. The split is a single 70/15/15 hold-out split into train, validation and test, built by \texttt{data\_scripts/build\_split\_pool.py} and \texttt{src/signbridge/data/splits.py} and saved in \texttt{data/processed/split\_v1.csv}.
+
+\subsection{Why a Random Split Would Leak}
+
+The ASL images look like frames from short recordings: many files in one class are almost the same photograph. The dataset has no signer identifiers, and we have not verified how many people appear in it, but the near-identical frames alone are enough to make a random split unsafe. A random split would put one frame in the training set and its neighbour in the test set, and the model would be scored on images it has effectively seen. Every metric would then be inflated. We therefore split by groups of look-alike images, so that all images of a group go to the same split.
+
+\subsection{Building the Image Pool}
+
+The pool is built one class at a time from the 3{,}000 images of each of the 26 letters (78{,}000 images). The classes \texttt{del}, \texttt{nothing} and \texttt{space} are not used. For each class the script measures every image and applies the same checks as the cleaning script of Deliverable~1, in this order.
+\begin{enumerate}
+  \item Unreadable files and quality failures (size, blur, brightness). No image was flagged in any of the 26 classes.
+  \item Exact duplicates (identical file hash). None were found.
+  \item Near-duplicates, using the 64-bit difference hash of Section~\ref{sec:data-cleaning} with a limit of 3 bits. This removed 62{,}039 of the 78{,}000 images (79.5\%); between 72.8\% and 84.7\% of each class, which leaves 458 to 816 images per class. The limit is a separate setting for the split (\texttt{split.near\_duplicate\_distance}), so the Deliverable~1 setting is unchanged. In a test on class A a limit of 4 bits left only 374 images, below our target of 400 per class, while 3 bits left 551.
+  \item Sampling. Up to 400 images per class are drawn at random with the seed from \texttt{configs/data.yaml}, so the same images are drawn every time. Every class had more than 400 images after cleaning, so each class has exactly 400.
+\end{enumerate}
+Table~\ref{tab:split-counts} shows the result: 10{,}400 images in total, 400 per letter.
+
+\subsection{Grouping Near-Identical Images}
+
+The images that remain are put into groups before the split. Our first method linked any two images whose hashes differ by at most a distance, directly or through a chain of other images. This failed: in class A the 375 remaining images, taken after near-duplicate removal at 4 bits, formed a single group at a limit of 10 bits, because a long run of frames links up one step at a time. A split by group is then impossible, since one group cannot be spread over three splits.
+
+We replaced it with bounded (leader) grouping. Images are visited in file-name order; an image joins the group of the closest earlier leader if their hashes differ by at most 10 bits, and otherwise starts a new group. Every member is close to its own leader, so a long run cannot merge into one group. Before sampling, each class had between 56 and 139 groups, and the largest group held between 23 and 68 images. We chose the limits (3 bits and 10 bits) from a diagnostic on class A that counted groups and group sizes for several values; for the final values class A has 69 groups with a largest group of 27 images.
+
+\subsection{Assigning Groups to Splits}
+
+Within each class, whole groups are assigned to splits. The groups are placed from largest to smallest, and each goes to the split that is furthest below its target size; groups of equal size are shuffled with the seed (42) so the result is reproducible. The code stops with an error if a class has fewer than three groups, if the fractions do not add up to 1, or if a group appears in two splits. The same leakage check is run on the final file, and a second script, \texttt{tools/check\_split.py}, confirms that the file matches the team contract (columns, relative paths, existing images, one split per group); it reported no problem. Unit tests cover the leakage check, the shares, reproducibility and bad input.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Images per split in \texttt{split\_v1.csv} (ASL baseline). Every class has the same counts.}
+  \label{tab:split-counts}
+  \begin{tabular}{lrrr}
+    \toprule
+    Split & Images per class & Images in total & Share \\
+    \midrule
+    Train & 280 & 7{,}280 & 70.0\% \\
+    Validation & 60 & 1{,}560 & 15.0\% \\
+    Test & 60 & 1{,}560 & 15.0\% \\
+    \midrule
+    All & 400 & 10{,}400 & 100\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Protecting the Test Set}
+
+Hyperparameters are tuned on the validation split only. The test split is used once, after the hyperparameters are frozen, to produce the final results. Both models read exactly the same split file.
+
+\subsection{Limits of this Split}
+\begin{itemize}
+  \item Grouping by a perceptual hash reduces leakage but cannot remove it. Without signer identifiers we cannot guarantee that no signer appears in both train and test, so the scores are likely to be higher than a person-wise split would give.
+  \item Removing 80\% of the images as near-duplicates keeps the visually distinct part of the data. The 400 images per class are therefore harder and more varied than a random sample, and the scores should not be compared with results reported on the full dataset.
+  \item Each validation and test class has 60 images, so one image changes a per-class recall by 1.7 percentage points.
+  \item The split uses the ASL baseline, not PSL. The manifest and person-wise split of Deliverable~1 will be used once PSL photos exist.
+\end{itemize}

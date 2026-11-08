@@ -1,4 +1,31 @@
 \section{Metrics}
 \label{sec:metrics}
 
-\todobox{Aliza: define and justify the metrics implemented in \texttt{src/signbridge/evaluation/metrics.py} (accuracy, macro precision, recall and F1, and AUC-ROC), including how the multiclass AUC-ROC is computed.}
+The function \texttt{evaluate} in \texttt{src/signbridge/evaluation/metrics.py} takes the true class indices, the predicted probabilities (one row per image, one column per letter) and the class names. The predicted letter is the class with the highest probability. It returns the metrics below, which are computed with scikit-learn and saved as JSON, a per-class CSV and a confusion matrix figure.
+
+\subsection{Definitions}
+
+For one class, let TP, FP and FN be the numbers of true positives, false positives and false negatives.
+\begin{align*}
+  \text{precision} &= \frac{TP}{TP + FP}, &
+  \text{recall} &= \frac{TP}{TP + FN}, &
+  F_1 &= \frac{2 \cdot \text{precision} \cdot \text{recall}}{\text{precision} + \text{recall}}.
+\end{align*}
+Accuracy is the share of images whose predicted letter is correct. Macro precision, recall and $F_1$ are the unweighted means of the 26 per-class values. A class that is never predicted has precision 0 by convention. The confusion matrix has one row per true letter and one column per predicted letter.
+
+\textbf{AUC-ROC.} The multiclass AUC-ROC is computed one-vs-rest. For each letter, the images of that letter are the positives and all other images are the negatives, and the probability of that letter is the score. The area under the ROC curve is the chance that a random image of the letter gets a higher score than a random image of another letter. The 26 areas are averaged without weights (macro average). The probabilities of each row must sum to 1; the function checks this and stops with an error otherwise. The AUC of a letter is undefined if that letter does not occur in the data, so the function also stops with an error in that case.
+
+\subsection{Why these Metrics}
+\begin{itemize}
+  \item \textbf{Accuracy} is the simplest summary. It is easy to read here because the data is balanced: every class has 60 test images (Section~\ref{sec:validation}). On such a test set the macro recall equals the accuracy.
+  \item \textbf{Macro and per-class precision, recall and $F_1$} are used to show which letters fail, not to correct for class imbalance, because there is none. Precision tells how often a predicted letter is right, recall how many images of a letter are found, and $F_1$ combines both. Several ASL letters are similar closed-fist shapes, so the per-class values can show which pairs a model confuses.
+  \item \textbf{Macro AUC-ROC} measures how well the probabilities rank the correct letter above the others, independently of the decision rule. It can show that one model has better-calibrated scores even when two models have the same accuracy.
+  \item \textbf{The confusion matrix} shows which letters are mistaken for which, and is the basis of the error analysis in Section~\ref{sec:error-analysis}.
+\end{itemize}
+
+\subsection{Limits}
+\begin{itemize}
+  \item The landmark model can only run on images where MediaPipe finds a hand, so both models are also compared on that common subset of the test set. There the classes are no longer perfectly balanced, and the macro recall can differ from the accuracy.
+  \item With 60 test images per class, each per-class value is coarse: one image is 1.7 percentage points of recall. The per-class numbers should be read as indications, not as exact values.
+  \item The metrics are computed on one split of the ASL baseline and do not measure how the models will do on PSL.
+\end{itemize}
