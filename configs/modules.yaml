@@ -8,6 +8,25 @@ modules:
     paths:
       - src/signbridge/config.py
       - src/signbridge/logging_setup.py
+      - configs/data.yaml
+
+  project:
+    owner: Anas
+    paths:
+      - .github/**
+      - .gitignore
+      - .mailmap
+      - README.md
+      - pyproject.toml
+      - requirements.txt
+      - requirements-dev.txt
+      - requirements-ml.txt
+      - src/signbridge/__init__.py
+
+  protocol:
+    owner: Aliza
+    paths:
+      - docs/data_collection_protocol.md
 
   download:
     owner: Anas
@@ -36,6 +55,7 @@ modules:
     paths:
       - data_scripts/features/labels.py
       - data_scripts/features/images.py
+      - data/processed/label_map.json
 
   manifest:
     owner: Aliza
@@ -57,12 +77,19 @@ modules:
     paths:
       - src/signbridge/models/landmark_models.py
       - src/signbridge/train_landmark.py
+      - src/signbridge/tune_landmark.py
+      - src/signbridge/plot_landmark_curves.py
+      - src/signbridge/training/landmark_trials.py
       - configs/landmark.yaml
+      - reports/tuning/landmark_trials.csv
+      - reports/predictions/landmark_*
 
   cnn_model:
     owner: Anas
     paths:
       - src/signbridge/models/cnn.py
+      - src/signbridge/models/__init__.py
+      - src/signbridge/data/__init__.py
       - src/signbridge/data/image_dataset.py
       - src/signbridge/data/transforms.py
       - configs/cnn.yaml

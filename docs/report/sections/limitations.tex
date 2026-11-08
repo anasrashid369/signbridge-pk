@@ -11,7 +11,7 @@ At the time of writing the team has collected 0 PSL photographs from 0 volunteer
 
 \subsection{A Subset of the Available Images}
 
-Training does not use all 87{,}000 images of the ASL baseline. The shared split uses a cleaned subset chosen by the data lead, targeting about 400 images per class after near-duplicate removal. This keeps tuning and final training feasible on the available hardware, but it reduces the variety the model sees and makes the results depend on which images were kept.
+Training does not use all 87{,}000 images of the ASL baseline. The shared split uses a cleaned subset chosen by the data lead, and the runbook caps the training split at 300 images per class after near-duplicate removal for this deliverable. This keeps tuning and final training feasible on the available hardware, but it reduces the variety the model sees and makes the results depend on which images were kept.
 
 \subsection{Frames and Signers Are Not Independent}
 
@@ -19,7 +19,7 @@ The ASL baseline consists of video frames. Many images of the same letter are ne
 
 \subsection{Small Compute Budget}
 
-All training runs on a CPU. The measured cost is about 3.2 seconds per training batch at $224\times224$ and batch size 32, which puts 10 epochs at roughly 2 hours for 400 images per class and makes a 12-trial search expensive. The search is therefore capped at 12 short trials, and the final model uses 10 to 15 epochs with early stopping. A larger compute budget would allow more trials, more epochs or a larger subset.
+All training runs on a CPU. The measured cost is about 3.2 seconds per training batch at $224\times224$ and batch size 32, which puts 10 epochs at roughly 1.5 hours for 300 images per class and 2 hours for 400, and makes a 12-trial search expensive. The runbook therefore uses 8 short trials and a final run of 10 epochs with early stopping. A larger compute budget would allow more trials, more epochs or a larger subset.
 
 \subsection{Static Letters Only}
 

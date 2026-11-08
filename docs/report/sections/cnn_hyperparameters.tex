@@ -44,4 +44,4 @@ A trial is ranked by its best validation macro-F1. Ties are broken in favour of 
   \todobox{The CNN trial table is missing. It will be generated from \texttt{reports/tuning/cnn\_trials.csv} by \texttt{tools/trials\_to\_tex.py} after the real tuning runs on the shared split.}
 }
 
-\todobox{Justification of the final chosen hyperparameters, to be written after the real tuning runs and after the best trial is known.}
+\todobox{Justification of the final chosen hyperparameters. After the real tuning run, read \texttt{reports/tuning/cnn\_trials.csv} and report: the row with the highest \texttt{best\_val\_macro\_f1}, breaking ties with the smallest \texttt{trainable\_parameters}; its \texttt{lr}, \texttt{batch\_size}, \texttt{dropout}, \texttt{weight\_decay} and \texttt{unfreeze\_blocks}; its \texttt{val\_accuracy}, \texttt{best\_val\_macro\_f1}, \texttt{epochs\_run} and \texttt{seconds}; the range of \texttt{best\_val\_macro\_f1} across all trials; and how many trials were run. Write the text only when the file exists, and do not copy numbers from a smoke run.}
