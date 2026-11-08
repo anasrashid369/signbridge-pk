@@ -148,3 +148,24 @@ def test_help_exits_cleanly() -> None:
     with pytest.raises(SystemExit) as info:
         splits.parse_args(["--help"])
     assert info.value.code == 0
+
+
+def test_build_split_rows_stops_at_the_final_leak_check(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Share one group between two letters and give each letter a different split.
+
+    The earlier group-label check is switched off so that the final leak check is reached.
+    """
+    pool = [
+        {"path": "A/1.jpg", "label": "A", "group_id": "G1"},
+        {"path": "B/1.jpg", "label": "B", "group_id": "G1"},
+    ]
+    monkeypatch.setattr(splits, "check_group_labels", lambda rows: None)
+    monkeypatch.setattr(
+        splits,
+        "assign_groups",
+        lambda sizes, fractions, seed: dict.fromkeys(
+            sizes, "train" if seed.endswith(":A") else "test"
+        ),
+    )
+    with pytest.raises(ValueError, match="more than one split"):
+        build_split_rows(pool, FRACTIONS, seed=1)
