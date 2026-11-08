@@ -14,6 +14,9 @@ paths:
   cleaning_report: data/interim/cleaning_report.csv  # one row per image with quality scores and flags (not in Git)
   cleaning_summary: reports/cleaning_summary.csv     # counts per class before and after each cleaning step (committed)
   cleaning_table: reports/cleaning_summary_table.tex # LaTeX table of the counts per dataset, included in the report (committed)
+  split_pool: data/interim/split_pool.csv  # images kept after cleaning, with near-duplicate group ids (not in Git)
+  split_summary: reports/split_pool_summary.csv  # per class: how many images each cleaning step removed (committed)
+  split_file: data/processed/split_v1.csv  # shared split: path,label,group_id,split (committed)
   hand_model: models/hand_landmarker.task  # MediaPipe hand landmarker model file (downloaded separately, not in Git)
 
 dataset:
@@ -36,3 +39,10 @@ manifest:                                 # settings for data_scripts/build_mani
   val_fraction: 0.2                       # share of people held out for validation
   test_fraction: 0.2                      # share of people held out for the final test
   
+
+split:                                    # settings for build_split_pool.py and signbridge/data/splits.py
+  images_per_class: 400                   # images kept per letter after cleaning (about 10,400 in total)
+  group_distance: 10                      # max differing hash bits (of 64) for two images to share a group; starting value
+  train_fraction: 0.70                    # share of each class in train
+  val_fraction: 0.15                      # share of each class in validation
+  test_fraction: 0.15                     # share of each class in the final test (used once)
