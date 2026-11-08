@@ -1,19 +1,27 @@
-"""Count non-merge commits per author and module, and write a LaTeX table."""
+"""Count non-merge commits per author and module, and write a LaTeX table.
+
+A commit can touch files from several modules, so every changed file is first
+assigned to exactly one module: the most specific matching path pattern wins.
+An exact path therefore beats a ``**`` glob, and a file that matches no module
+is not counted.
+"""
 
 from __future__ import annotations
 
 import argparse
 import csv
 import logging
+import re
 import subprocess
 from collections import Counter
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from signbridge.config import REPO_ROOT, load_config
 
 logger = logging.getLogger(__name__)
 
 CSV_COLUMNS = ["module", "owner", "author", "commits"]
+WILDCARDS = ("*", "?")
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -33,8 +41,78 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def author_counts(repo: Path, revision: str, paths: list[str]) -> Counter[str]:
-    """Return the number of non-merge commits per author for the given paths."""
+def _normalise(value: str) -> str:
+    """Return a POSIX path without a leading ``./`` or ``/``."""
+    value = value.replace("\\", "/")
+    while value.startswith("./"):
+        value = value[2:]
+    return value.lstrip("/")
+
+
+def _glob_regex(pattern: str) -> re.Pattern[str]:
+    """Turn a POSIX glob into an anchored regular expression.
+
+    ``**`` matches any number of path segments and ``*`` matches inside one
+    segment, so ``src/signbridge/training/**`` covers nested files while
+    ``reports/predictions/landmark_*`` stays in one folder.
+    """
+    pattern = _normalise(pattern)
+    parts: list[str] = []
+    index = 0
+    while index < len(pattern):
+        character = pattern[index]
+        if pattern.startswith("**/", index):
+            parts.append("(?:.*/)?")
+            index += 3
+        elif pattern.startswith("**", index):
+            parts.append(".*")
+            index += 2
+        elif character == "*":
+            parts.append("[^/]*")
+            index += 1
+        elif character == "?":
+            parts.append("[^/]")
+            index += 1
+        else:
+            parts.append(re.escape(character))
+            index += 1
+    return re.compile("^" + "".join(parts) + "$")
+
+
+def _specificity(pattern: str) -> tuple[int, int]:
+    """Rank a pattern: an exact path beats a glob, then the longer literal wins."""
+    literal = len(pattern) - sum(pattern.count(mark) for mark in WILDCARDS)
+    return (2, literal) if not any(mark in pattern for mark in WILDCARDS) else (1, literal)
+
+
+def module_for_path(path: str, modules: dict[str, dict[str, object]]) -> str | None:
+    """Return the most specific module that owns ``path``, or None.
+
+    Raises:
+        ValueError: If two modules match with the same specificity, because
+            that ownership is ambiguous.
+    """
+    relative = PurePosixPath(_normalise(path)).as_posix()
+    matches: list[tuple[tuple[int, int], str]] = []
+    for name, module in modules.items():
+        for pattern in module["paths"]:
+            if _glob_regex(str(pattern)).match(relative):
+                matches.append((_specificity(str(pattern)), name))
+                break
+    if not matches:
+        return None
+    matches.sort(reverse=True)
+    best_score, best_name = matches[0]
+    if len(matches) > 1 and matches[1][0] == best_score and matches[1][1] != best_name:
+        raise ValueError(
+            f"Path {relative!r} matches {best_name!r} and {matches[1][1]!r} equally well; "
+            "make one pattern more specific"
+        )
+    return best_name
+
+
+def commit_files(repo: Path, revision: str) -> list[tuple[str, list[str]]]:
+    """Return (author, changed files) for every non-merge commit on ``revision``."""
     command = [
         "git",
         "-C",
@@ -42,25 +120,46 @@ def author_counts(repo: Path, revision: str, paths: list[str]) -> Counter[str]:
         "log",
         "--use-mailmap",
         "--no-merges",
-        "--format=%aN",
+        "--name-only",
+        "--format=%x1e%aN",
         revision,
-        "--",
-        *paths,
     ]
     result = subprocess.run(command, capture_output=True, text=True, check=True)
-    return Counter(line for line in result.stdout.splitlines() if line.strip())
+    commits: list[tuple[str, list[str]]] = []
+    for record in result.stdout.split("\x1e"):
+        lines = [line.strip() for line in record.splitlines() if line.strip()]
+        if not lines:
+            continue
+        commits.append((lines[0], lines[1:]))
+    return commits
 
 
-def build_rows(config: dict, repo: Path, revision: str) -> list[dict[str, object]]:
-    """Return one row per module and author with at least one commit."""
+def build_rows(
+    config: dict, repo: Path, revision: str
+) -> tuple[list[dict[str, object]], list[str]]:
+    """Return table rows and the changed files that belong to no module."""
+    modules = config["modules"]
+    counts: dict[str, Counter[str]] = {name: Counter() for name in modules}
+    unmatched: set[str] = set()
+    for author, files in commit_files(repo, revision):
+        touched: set[str] = set()
+        for path in files:
+            if PurePosixPath(path).name == ".gitkeep":
+                continue
+            module = module_for_path(path, modules)
+            if module is None:
+                unmatched.add(path)
+            else:
+                touched.add(module)
+        for module in touched:
+            counts[module][author] += 1
     rows: list[dict[str, object]] = []
-    for name, module in config["modules"].items():
-        counts = author_counts(repo, revision, module["paths"])
-        for author, commits in sorted(counts.items(), key=lambda item: (-item[1], item[0])):
+    for name, module in modules.items():
+        for author, commits in sorted(counts[name].items(), key=lambda item: (-item[1], item[0])):
             rows.append(
                 {"module": name, "owner": module["owner"], "author": author, "commits": commits}
             )
-    return rows
+    return rows, sorted(unmatched)
 
 
 def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
@@ -116,12 +215,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     try:
         config = load_config(args.config)
-        rows = build_rows(config, args.repo, args.revision)
+        rows, unmatched = build_rows(config, args.repo, args.revision)
         write_csv(args.csv, rows)
         write_tex(args.tex, rows)
     except (FileNotFoundError, KeyError, ValueError, subprocess.CalledProcessError) as error:
         logger.error("%s", error)
         return 1
+    if unmatched:
+        logger.warning("%d changed files belong to no module: %s", len(unmatched), unmatched)
     logger.info("Wrote %d rows to %s and %s", len(rows), args.csv, args.tex)
     return 0
 
