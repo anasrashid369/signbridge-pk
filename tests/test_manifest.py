@@ -162,3 +162,24 @@ def test_repo_config_has_manifest_settings() -> None:
     assert {"lighting_values", "background_values", "val_fraction", "test_fraction"} <= set(
         config["manifest"]
     )
+
+
+def test_scan_images_outside_root_raises_instead_of_writing_an_absolute_path(
+    tmp_path: Path,
+) -> None:
+    psl_dir = make_psl_folder(tmp_path)
+    with pytest.raises(ValueError, match="outside"):
+        scan_images(psl_dir, LIGHTING, BACKGROUND, tmp_path / "elsewhere")
+
+
+def test_main_with_a_folder_outside_the_repo_writes_only_relative_paths(tmp_path: Path) -> None:
+    psl_dir = make_psl_folder(tmp_path, people=5)
+    output = tmp_path / "out" / "manifest.csv"
+    code = build_manifest.main(
+        ["--config", str(DEFAULT_CONFIG_PATH), "--psl-dir", str(psl_dir), "--output", str(output)]
+    )
+    assert code == 0
+    with output.open(encoding="utf-8") as handle:
+        paths = [row["path"] for row in csv.DictReader(handle)]
+    assert paths and not any(Path(path).is_absolute() for path in paths)
+    assert all(path.startswith("psl/") for path in paths)

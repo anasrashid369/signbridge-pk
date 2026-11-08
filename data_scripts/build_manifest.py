@@ -94,6 +94,12 @@ def manifest_path(path: Path, root: Path) -> str:
         return path.as_posix()
 
 
+def choose_root(psl_dir: Path) -> Path:
+    """Return the repository root, or the parent of psl_dir if the folder is outside the repo."""
+    folder = psl_dir.resolve()
+    return REPO_ROOT if folder.is_relative_to(REPO_ROOT) else folder.parent
+
+
 def scan_images(
     psl_dir: Path, lighting_values: set[str], background_values: set[str], root: Path
 ) -> list[dict[str, str]]:
@@ -110,6 +116,10 @@ def scan_images(
             logger.warning("Skipping %s", error)
             continue
         row["path"] = manifest_path(path, root)
+        if Path(row["path"]).is_absolute():
+            raise ValueError(
+                f"{path} is outside {root}; refusing to write an absolute path into the manifest"
+            )
         rows.append(row)
     if not rows:
         raise ValueError(f"No correctly named images found in {psl_dir}")
@@ -185,7 +195,12 @@ def run(args: argparse.Namespace) -> None:
     config = load_config(args.config)
     psl_dir = args.psl_dir or resolve_path(config, "psl_raw_dir")
     output = args.output or resolve_path(config, "manifest")
-    rows = build_rows(config, psl_dir)
+    root = choose_root(psl_dir)
+    if root != REPO_ROOT:
+        logger.warning(
+            "%s is outside the repository; manifest paths are relative to %s", psl_dir, root
+        )
+    rows = build_rows(config, psl_dir.resolve(), root)
     write_manifest(rows, output)
     log_summary(rows)
     logger.info("Wrote %d rows to %s", len(rows), output)
