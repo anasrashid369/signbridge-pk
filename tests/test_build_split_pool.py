@@ -8,7 +8,7 @@ from pathlib import Path
 import yaml
 
 from data_scripts import build_split_pool
-from data_scripts.build_split_pool import group_by_distance, sample_rows
+from data_scripts.build_split_pool import group_by_distance, group_by_leader, sample_rows
 from tests.image_helpers import make_pattern
 
 
@@ -117,3 +117,19 @@ def test_missing_class_folder_returns_error(tmp_path: Path) -> None:
     config = write_config(tmp_path)
     args = ["--config", str(config), "--image-root", str(root), "--classes", "Z"]
     assert build_split_pool.main(args) == 1
+
+
+def test_group_by_leader_does_not_chain_a_long_sequence() -> None:
+    """Hashes 0, 3, 6, 9, 12 chain into one group, but leader grouping splits them."""
+    items = [(f"A/{i}.png", (1 << (3 * i)) - 1) for i in range(5)]
+    chained = group_by_distance(items, 3, "A")
+    leader = group_by_leader(items, 3, "A")
+    assert len(set(chained.values())) == 1
+    assert len(set(leader.values())) == 3
+    assert leader["A/0.png"] == leader["A/1.png"]
+    assert leader["A/1.png"] != leader["A/2.png"]
+
+
+def test_group_by_leader_empty_input() -> None:
+    """No images means no groups."""
+    assert group_by_leader([], 10, "A") == {}
