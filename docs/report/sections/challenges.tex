@@ -88,3 +88,49 @@ This section records problems the team actually ran into while setting up the re
 \textbf{How we handled it.} We did not guess a list. The letter set will be fixed in Deliverable~2 from a cited source and checked with a PSL user, before any PSL photos are collected. Until then the label map contains the 26 letters A to Z, which fit only the ASL baseline.
 
 \textbf{Still open.} The letter set, and therefore the number of PSL classes, is not decided yet.
+
+\subsection{The CPU Time Budget}
+\label{sec:challenge-cpu}
+
+\textbf{What happened.} The CNN was developed on a machine without CUDA. A timing run at $224\times224$ pixels, batch size 32 and the last two feature blocks unfrozen showed that the CPU cost per batch is high enough to make the original plan expensive: 12 tuning trials of 3 epochs at 400 images per class would take many hours, before the final run.
+
+\textbf{How we handled it.} We kept the tuning rule but reduced the search to 8 trials and the training split to 300 images per class for this deliverable, with a final run of 10 epochs. Validation and test stay complete, so the scores remain comparable. The new preflight command measures the actual machine and estimates one epoch, the whole search and the final run before any long job starts, and the Colab/Kaggle recipe is documented for a GPU runtime.
+
+\textbf{What we learned.} Compute should be measured before it is committed. Capping only the training split is a defensible compromise; changing validation or test would make runs incomparable.
+
+\subsection{Waiting for the Shared Split File}
+\label{sec:challenge-split}
+
+\textbf{What happened.} Every training command reads \texttt{data/processed/split\_v1.csv}, but that file was not on \texttt{main} when the CNN code was finished. Training, tuning and the final predictions could not start.
+
+\textbf{How we handled it.} The code was written and tested against a scratch split outside the repository, and \texttt{tools/check\_split.py} was added so the real file can be checked before a run. We did not invent a split or silently write a fallback.
+
+\textbf{Still open.} The real runs wait for the data lead's committed split file. A fallback split would have to reuse the existing near-duplicate grouping, be labelled as a fallback, and be agreed before it is written.
+
+\subsection{A Dependency Conflict in the ML Requirements}
+\label{sec:challenge-deps}
+
+\textbf{What happened.} The first version of \texttt{requirements-ml.txt} pinned Gradio together with the training stack. Gradio pulled in a Pillow version that conflicted with the pinned Pillow 13.0.0, so a clean install did not resolve.
+
+\textbf{How we fixed it.} Gradio was removed from \texttt{requirements-ml.txt}; it returns with the Deliverable~3 app. The remaining file installs the Deliverable~1 runtime plus the pinned CPU builds of PyTorch and torchvision, and \texttt{pip install -r requirements-ml.txt} was checked in a fresh virtual environment.
+
+\subsection{The CPU Wheel Pin on a GPU Runtime}
+\label{sec:challenge-cpu-pin}
+
+\textbf{What happened.} \texttt{requirements-ml.txt} pins the \texttt{+cpu} builds of PyTorch and torchvision. Running that file on Colab or Kaggle would replace the preinstalled CUDA build and quietly move training back to the CPU.
+
+\textbf{How we fixed it.} The remote recipe installs only \texttt{requirements.txt} and the editable package, checks \path{torch.cuda.is_available()} and the GPU name, and then runs \path{signbridge.preflight} before any training. The local CPU install remains the documented one for this machine.
+
+\subsection{A Commit Script That Assumed the Repository Root}
+\label{sec:challenge-commit-script}
+
+\textbf{What happened.} The first PowerShell commit script used repository-relative paths but did not check its working directory. Started from another folder, every explicit \texttt{git add} path failed.
+
+\textbf{How we fixed it.} The script now checks every path with \texttt{Test-Path -LiteralPath} before staging, stops with the missing file name, and is documented to run from the repository root. Every commit still lists its files explicitly.
+
+\subsection{No Evaluation-Only Mode}
+\label{sec:challenge-eval-only}
+
+\textbf{What happened.} \texttt{train\_cnn} has no separate evaluation command. The \texttt{-{}-evaluate-test} flag trains first and then evaluates the test split, so a second evaluation would repeat the training.
+
+\textbf{How we handled it.} The runbook uses exactly one final run with \texttt{-{}-evaluate-test}, after the hyperparameters are frozen. That run writes the validation and test prediction files together, so the test split is still read once.
