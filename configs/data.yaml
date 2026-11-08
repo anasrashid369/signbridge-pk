@@ -46,3 +46,5 @@ split:                                    # settings for build_split_pool.py and
   train_fraction: 0.70                    # share of each class in train
   val_fraction: 0.15                      # share of each class in validation
   test_fraction: 0.15                     # share of each class in the final test (used once)
+  near_duplicate_distance: 3   # split pool only; the Deliverable 1 cleaning keeps quality.near_duplicate_distance
+  group_method: leader         # leader = bounded groups; chain links whole video-like runs into one group

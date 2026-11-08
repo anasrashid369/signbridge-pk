@@ -112,6 +112,31 @@ def group_by_distance(
     return groups
 
 
+def group_by_leader(items: list[tuple[str, int]], max_distance: int, label: str) -> dict[str, str]:
+    """Give images a group id with bounded (leader) grouping instead of chaining.
+
+    Images are visited in path order. An image joins the first earlier group leader whose hash
+    is within max_distance bits; otherwise it becomes a new leader. Every member is therefore
+    close to its own leader, so a long video-like sequence cannot merge into one big group.
+
+    Returns a mapping of path to group id such as ``A_g0007``.
+    """
+    leader_hashes = np.zeros(len(items), dtype=np.uint64)
+    leader_count = 0
+    groups: dict[str, str] = {}
+    for path, value in items:
+        if leader_count:
+            distances = hamming_distances(leader_hashes[:leader_count], value)
+            closest = int(distances.argmin())
+            if distances[closest] <= max_distance:
+                groups[path] = f"{label}_g{closest:04d}"
+                continue
+        leader_hashes[leader_count] = np.uint64(value)
+        groups[path] = f"{label}_g{leader_count:04d}"
+        leader_count += 1
+    return groups
+
+
 def clean_class(
     image_root: Path, label: str, config: dict[str, Any]
 ) -> tuple[list[dict[str, str]], dict[str, Any]]:
@@ -135,11 +160,15 @@ def clean_class(
     ]
     exact = find_exact_duplicates([(path, stats[path].sha256) for path in good])
     unique = [path for path in good if path not in exact]
-    near = find_near_duplicates(
-        [(path, stats[path].dhash) for path in unique], int(thresholds["near_duplicate_distance"])
+    near_distance = config["split"].get(
+        "near_duplicate_distance", thresholds["near_duplicate_distance"]
     )
+    near = find_near_duplicates([(path, stats[path].dhash) for path in unique], int(near_distance))
     kept = [path for path in unique if path not in near]
-    groups = group_by_distance(
+    group_function = {"chain": group_by_distance, "leader": group_by_leader}[
+        config["split"].get("group_method", "leader")
+    ]
+    groups = group_function(
         [(path, stats[path].dhash) for path in kept], int(config["split"]["group_distance"]), label
     )
     sizes: dict[str, int] = {}
