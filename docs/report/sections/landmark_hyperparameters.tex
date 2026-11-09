@@ -34,9 +34,7 @@ The remaining settings are fixed during tuning: two hidden layers, at most 100 e
 
 \subsection{Selection Rule}
 
-Within each model family, the trial with the highest validation macro-F1 wins. Macro-F1 is used because it weights all 26 letters equally and shows letters that fail, even though the classes are balanced. The winning settings of the three families are written to \texttt{configs/landmark.yaml} in one commit that names the winning trials, before the final training run. The family with the highest validation macro-F1 is then treated as the landmark model.
-
-\todobox{Confirm the tie-break rule in the docstring of \texttt{src/signbridge/tune\_landmark.py} and state it here in one sentence. Delete this note afterwards.}
+Within each model family, the trial with the highest validation macro-F1 wins. Macro-F1 is used because it weights all 26 letters equally and shows letters that fail, even though the classes are balanced. The winning settings of the three families are written to \texttt{configs/landmark.yaml} in one commit that names the winning trials, before the final training run. The family with the highest validation macro-F1 is then treated as the landmark model. If two trials of a family have exactly the same validation macro-F1, the one recorded first in the trials file is kept; there is no further tie-break.
 
 \subsection{Trial Results}
 
