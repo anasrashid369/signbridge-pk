@@ -11,7 +11,7 @@ n_classes: 26                 # A-Z, class order from data/processed/label_map.j
 svm:
   C: 10.0                     # regularisation: larger C fits the training data harder
   gamma: scale                # RBF kernel width: "scale" or a positive number
-  # probability=True is fixed in code so AUC-ROC can be computed
+ # Probabilities are produced through CalibratedClassifierCV.
 
 # --- Random Forest -----------------------------------------------------
 forest:
@@ -29,7 +29,7 @@ mlp:
   epochs: 100                 # upper limit; early stopping usually ends sooner
   patience: 10                # stop after this many epochs without validation macro-F1 gain
 
-# --- Tuning (validation split ONLY, never the test split) ---------------
+
 # --- Tuning (validation split ONLY, never the test split) ---------------
 tuning:
   trials_csv: reports/tuning/landmark_trials.csv   # one row per trial
@@ -45,7 +45,7 @@ tuning:
   mlp_max_trials: 20                               # ... of which this many are sampled (seeded)
 
 # --- Outputs -----------------------------------------------------------
-# --- Outputs -----------------------------------------------------------
+
 output:
   predictions_dir: reports/predictions             # FINAL val/test prediction files (committed)
   runs_dir: reports/predictions/runs               # scratch and tuning runs (ignored by Git)
