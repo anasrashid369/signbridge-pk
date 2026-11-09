@@ -1,4 +1,54 @@
 \section{Landmark Hyperparameter Search}
 \label{sec:landmark-hyperparameters}
 
-\todobox{Fatima: describe the search space, the selection rule and the trial results for the SVM, Random Forest and MLP models. Include the trial table from your own CSV once the runs are complete.}
+\subsection{Search Space}
+
+The tuning grid is stored in \texttt{configs/landmark.yaml} and read by \texttt{python -m signbridge.tune\_landmark}. The SVM and the random forest use their full grids: $4\times4=16$ SVM trials and $3\times3=9$ forest trials. The MLP grid has five hyperparameters with three values each, $3^5=243$ combinations, which is too many to train. A seeded random sample of 20 combinations is run instead (Table~\ref{tab:landmark-search-space}). At most $16+9+20=45$ trials are therefore run. Each trial appends one row to \texttt{reports/tuning/landmark\_trials.csv}, which has its own columns for the SVM, forest and MLP parameters. A trial that is already in the file is skipped, so an interrupted search can be resumed. Every trial is trained on the training split and scored on the validation split. The test split is never read during tuning.
+
+\begin{table}[htbp]
+\centering
+\caption{Landmark hyperparameter search space in \texttt{configs/landmark.yaml}.}
+\label{tab:landmark-search-space}
+\begin{tabular}{lll}
+\toprule
+Model & Hyperparameter & Values \\
+\midrule
+SVM & $C$ & 0.1, 1, 10, 100 \\
+SVM & $\gamma$ & scale, 0.01, 0.1, 1 \\
+Random forest & Number of trees & 100, 300, 500 \\
+Random forest & Maximum depth & none, 10, 20 \\
+MLP & Learning rate & $3\times10^{-4}$, $1\times10^{-3}$, $3\times10^{-3}$ \\
+MLP & Batch size & 32, 64, 128 \\
+MLP & Dropout & 0.1, 0.3, 0.5 \\
+MLP & Hidden width & 64, 128, 256 \\
+MLP & Weight decay & 0, $1\times10^{-4}$, $1\times10^{-3}$ \\
+\midrule
+Trials & SVM / forest / MLP & 16 / 9 / 20 (seeded sample of 243) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The remaining settings are fixed during tuning: two hidden layers, at most 100 epochs, early-stopping patience 10, AdamW, 63 inputs, 26 classes and seed 42. Every SVM trial fits the \texttt{SVC} about six times because of the calibration (Section~\ref{sec:landmark-models}), so the SVM grid is the most expensive part of the search.
+
+\todobox{If the SVM grid was reduced to fit the time budget, replace the SVM rows and the trial count above with what was actually run, and state the measured time of one SVM trial. Otherwise delete this note.}
+
+\subsection{Selection Rule}
+
+Within each model family, the trial with the highest validation macro-F1 wins. Macro-F1 is used because it weights all 26 letters equally and shows letters that fail, even though the classes are balanced. The winning settings of the three families are written to \texttt{configs/landmark.yaml} in one commit that names the winning trials, before the final training run. The family with the highest validation macro-F1 is then treated as the landmark model.
+
+\todobox{Confirm the tie-break rule in the docstring of \texttt{src/signbridge/tune\_landmark.py} and state it here in one sentence. Delete this note afterwards.}
+
+\subsection{Trial Results}
+
+\IfFileExists{../../reports/tuning/landmark_trials_table.tex}{%
+  \begin{table}[htbp]
+  \centering
+  \caption{Tuning trials for the landmark models, as recorded. The table is generated from \texttt{reports/tuning/landmark\_trials.csv}.}
+  \label{tab:landmark-trials}
+  \resizebox{\linewidth}{!}{\input{../../reports/tuning/landmark_trials_table.tex}}
+  \end{table}
+}{%
+  \todobox{The landmark trial table is missing. Generate it from \texttt{reports/tuning/landmark\_trials.csv} after the real tuning run on the shared split.}
+}
+
+\todobox{Winners and justification. After the real tuning run, read \texttt{reports/tuning/landmark\_trials.csv} and report for each family: the winning parameters, its validation accuracy and macro-F1, and the range of validation macro-F1 over all trials of that family. Say which family won overall. Justify each choice with the data, for example whether the best $C$ lies at the edge of the grid (which would suggest a larger grid) and whether the differences between the top trials are larger than the seed-to-seed noise. Write this text only when the file exists, and do not copy numbers from a smoke run.}

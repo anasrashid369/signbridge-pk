@@ -1,4 +1,76 @@
 \section{Landmark Models}
 \label{sec:landmark-models}
 
-\todobox{Fatima: describe the landmark-based models, their inputs from \texttt{data\_scripts/features/} and their training procedure. This section must match \texttt{src/signbridge/models/landmark\_models.py} and \texttt{src/signbridge/train\_landmark.py} once they are merged.}
+\subsection{Framework and Pipeline}
+
+The landmark branch classifies a hand image in two stages. First, the MediaPipe hand landmarker finds one hand and returns 21 landmarks, each with $x$, $y$ and $z$ coordinates (Section~\ref{sec:feature-results}). The coordinates are normalised relative to the wrist and flattened into a vector of $21\times3=63$ values. Second, a classifier maps this vector to a probability for each of the 26 letters, in the class order of \texttt{data/processed/label\_map.json}. Three classifier families are trained on the same vectors: a support vector machine and a random forest from scikit-learn, and a multilayer perceptron (MLP) written in PyTorch. The code is in \texttt{src/signbridge/models/landmark\_models.py} and the training command is \texttt{src/signbridge/train\_landmark.py}.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[box/.style={draw, rounded corners, align=center, minimum width=2.6cm, minimum height=0.9cm, inner sep=3pt, font=\small}]
+  \node[box] (img) at (0,0) {Hand image};
+  \node[box] (mp) at (3.8,0) {MediaPipe hand\\landmarker\\(21 points)};
+  \node[box] (norm) at (7.8,0) {Wrist-normalised\\vector\\(63 values)};
+  \node[box] (svm) at (12.2,1.4) {Scaler + RBF SVM\\(calibrated)};
+  \node[box] (rf) at (12.2,0) {Random forest};
+  \node[box] (mlp) at (12.2,-1.4) {MLP\\(63 $\to$ 26 logits)};
+  \node[box] (out) at (16.2,0) {26 class\\probabilities};
+  \draw[->] (img) -- (mp);
+  \draw[->] (mp) -- (norm);
+  \draw[->] (norm.east) -- (svm.west);
+  \draw[->] (norm.east) -- (rf.west);
+  \draw[->] (norm.east) -- (mlp.west);
+  \draw[->] (svm.east) -- (out.west);
+  \draw[->] (rf.east) -- (out.west);
+  \draw[->] (mlp.east) -- (out.west);
+\end{tikzpicture}%
+}
+\caption{The landmark pipeline. Images in which no hand is found stop after the landmarker and receive no prediction.}
+\label{fig:landmark-pipeline}
+\end{figure}
+
+\subsection{Classical Baselines}
+
+\textbf{Support vector machine.} The SVM is a pipeline of a \texttt{StandardScaler} and an RBF-kernel \texttt{SVC}, with the regularisation $C$ and the kernel width $\gamma$ as hyperparameters. The AUC-ROC metric needs class probabilities, which an \texttt{SVC} does not give by default. The earlier plan was to switch on the \texttt{probability=True} option. In scikit-learn 1.9 that option is deprecated and planned for removal in version 1.11, so the \texttt{SVC} is wrapped in \texttt{CalibratedClassifierCV} with sigmoid calibration, 5 folds and \texttt{ensemble=False}. The calibrator is fitted on cross-validated decision values and the \texttt{SVC} is then refitted once on all training data. The output is an $n\times26$ matrix whose rows sum to 1, which is checked by a unit test. The calibration needs at least 5 training images per class and makes each SVM fit about six times more expensive than a plain \texttt{SVC}.
+
+\textbf{Random forest.} The forest is a scikit-learn \texttt{RandomForestClassifier} with the number of trees and the maximum depth as hyperparameters. Tree models do not depend on feature scale, so no scaler is used.
+
+\subsection{Multilayer Perceptron}
+
+The MLP takes the 63 landmark values after standardisation. The mean and standard deviation are computed on the training split only. Each hidden block is a linear layer, a ReLU activation and dropout, and the output layer is a linear layer with 26 logits (Table~\ref{tab:landmark-mlp-layers}). The number of hidden layers is fixed by the configuration, while the hidden width and the dropout probability are tuned (Section~\ref{sec:landmark-hyperparameters}).
+
+\begin{table}[htbp]
+\centering
+\caption{Layers of the landmark MLP. $h$ is the hidden width and $p$ the dropout probability.}
+\label{tab:landmark-mlp-layers}
+\begin{tabular}{lll}
+\toprule
+Layer & Output size & Note \\
+\midrule
+Input & 63 & standardised landmark values \\
+Linear, ReLU, Dropout($p$) & $h$ & repeated for each hidden layer \\
+Linear & 26 & logits, one per letter \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Loss.} The loss is \texttt{CrossEntropyLoss}. It combines a log-softmax with the negative log-likelihood, so the network outputs raw logits and the softmax is applied only when probabilities are needed. Cross-entropy is the standard choice for a single-label problem with 26 mutually exclusive classes.
+
+\textbf{Optimiser.} Training uses AdamW, which applies weight decay separately from the gradient step. Learning rate, weight decay and batch size are tuned. Batches are shuffled with a seeded generator, so a run with the same seed gives the same loss curve.
+
+\textbf{Early stopping.} Training runs for at most 100 epochs. After each epoch the model is scored on the validation split, with dropout switched off. If the validation macro-F1 does not improve for 10 epochs, training stops and the weights of the best epoch are restored. Loss and accuracy of both splits are written for every epoch to \texttt{reports/tuning/mlp\_history.csv}, which gives the learning curves.
+
+\subsection{Training Procedure and Use of the Splits}
+
+One command trains the models and writes the predictions: \texttt{python -m signbridge.train\_landmark}. The seed comes from \texttt{configs/data.yaml} and is logged. The shared group-aware split (Section~\ref{sec:validation-strategy}) has 280 training, 60 validation and 60 test images per letter, before images without a detected hand are removed. The validation split is used for early stopping and for all hyperparameter selection. The test split is read only by the final run (\texttt{--final --evaluate-test}), which happens once, after the chosen settings have been committed to \texttt{configs/landmark.yaml}. The family with the highest validation macro-F1 is treated as the landmark model, and its prediction files are copied to \texttt{reports/predictions/landmark\_val.npz} and \texttt{landmark\_test.npz}. The files of the other families are kept next to them. No cross-validation was run.
+
+\subsection{Limitation: Images Without a Detected Hand}
+
+A landmark model can only predict for images in which MediaPipe finds a hand. Images without a detection are not counted as errors; they are missing from the prediction files, so landmark scores describe the detected images only and cannot be read as accuracy on all images. This is why the comparison with the CNN uses the common set of detected test images. In the 20-image check of Section~\ref{sec:feature-results}, a hand was found in 15 of 20 images. We kept the default confidence of 0.5, because a wrong landmark vector is worse than a missing one.
+
+\todobox{Insert the real detection rates after the extraction run on the shared split: rate for train, validation and test (from \texttt{landmark\_detection\_by\_split.csv}), rate per letter and the weakest letters (from \texttt{landmark\_detections\_split.csv}). State how many images remain in each split. Do not use numbers from a smoke run.}
+
+\subsection{Learning Curves}
+
+\todobox{After the final run, include the MLP loss and accuracy curves from \texttt{reports/figures/} (made by \texttt{python -m signbridge.plot\_landmark\_curves}) and describe them: the epoch where early stopping ended, the gap between training and validation, and whether the curves show overfitting. Use only the real run.}
