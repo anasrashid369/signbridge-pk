@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -206,6 +207,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def publish_best_family(
+    summary: dict[str, dict[str, float]], prediction_dir: Path, include_test: bool
+) -> str:
+    """Copy the best family's files to landmark_val.npz and landmark_test.npz.
+
+    "Best" means the highest validation macro-F1. The per-family files stay in place.
+    Returns the name of the winning family.
+    """
+    best = max(summary, key=lambda name: summary[name]["val_macro_f1"])
+    shutil.copyfile(
+        prediction_dir / f"landmark_{best}_val.npz", prediction_dir / "landmark_val.npz"
+    )
+    if include_test:
+        shutil.copyfile(
+            prediction_dir / f"landmark_{best}_test.npz", prediction_dir / "landmark_test.npz"
+        )
+    return best
+
+
 def run(args: argparse.Namespace) -> dict[str, dict[str, float]]:
     """Train the chosen models, save them and write the prediction files."""
     if args.evaluate_test and not args.final:
@@ -270,6 +290,9 @@ def run(args: argparse.Namespace) -> dict[str, dict[str, float]]:
                 test_paths,
                 class_names,
             )
+    if args.final:
+        best = publish_best_family(summary, prediction_dir, test_data is not None)
+        logger.info("Best family on validation: %s (copied to landmark_val/test.npz)", best)
     logger.info("Predictions written to %s", prediction_dir)
     return summary
 
