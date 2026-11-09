@@ -134,3 +134,31 @@ This section records problems the team actually ran into while setting up the re
 \textbf{What happened.} \texttt{train\_cnn} has no separate evaluation command. The \texttt{-{}-evaluate-test} flag trains first and then evaluates the test split, so a second evaluation would repeat the training.
 
 \textbf{How we handled it.} The runbook uses exactly one final run with \texttt{-{}-evaluate-test}, after the hyperparameters are frozen. That run writes the validation and test prediction files together, so the test split is still read once.
+
+\subsection{Network Failures During Setup}
+\label{sec:challenge-network}
+
+\textbf{What happened.} \texttt{git pull} failed with ``Could not resolve host: github.com'', and installing PyTorch with \texttt{pip} timed out and then hit a locked temporary file (\texttt{WinError 32}).
+
+\textbf{How we handled it.} We flushed the DNS cache or used a phone hotspot, moved the pip temporary folder to the \texttt{C:} drive, and used longer pip timeouts with retries.
+
+\subsection{Split Images Missing on the Model Lead's Machine}
+\label{sec:challenge-missing-images}
+
+\textbf{What happened.} The real split arrived late, and the images it lists were not on the landmark model lead's machine, which held only a 22-image sample. A larger sample zip that was available contained only 129 of the 10{,}400 paths in \texttt{split\_v1.csv}. A script that compared the zip with the split file found the mismatch before any extraction ran.
+
+\textbf{How we handled it.} The images were requested as a subset zip that contains exactly the images of the split, and every split path is checked for existence before extraction. This delayed extraction, tuning and the final run.
+
+\subsection{Deprecated SVM Probability Option}
+\label{sec:challenge-svc-probability}
+
+\textbf{What happened.} The first SVM used \texttt{SVC(probability=True)}. Under scikit-learn 1.9 the test run printed a \texttt{FutureWarning}: the option is deprecated and planned for removal in version 1.11.
+
+\textbf{How we fixed it.} The \texttt{SVC} is now wrapped in \texttt{CalibratedClassifierCV(..., ensemble=False)}. A unit test checks that the probabilities have shape $n\times26$, that each row sums to 1, and that the calibrated classifier is used. The cost is about six \texttt{SVC} fits per SVM trial.
+
+\subsection{Lint Failure and Memory Error in Tests}
+\label{sec:challenge-lint-memory}
+
+\textbf{What happened.} A pull request failed the continuous-integration lint step because of an unsorted import block, although the same check had passed locally. Separately, a local test run stopped at collection with \texttt{WinError 1455} (the paging file is too small) while loading PyTorch, and every later test file that imports PyTorch then failed with the same cascade.
+
+\textbf{How we handled it.} The lint error was fixed with \texttt{ruff -{}-fix} in a new commit. The test run was repeated after closing other programs, and all tests then passed.
