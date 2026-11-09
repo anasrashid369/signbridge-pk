@@ -1,5 +1,6 @@
 \section{Validation Strategy}
 \label{sec:validation}
+\label{sec:validation-strategy}
 
 All models in Deliverable~2 are trained and evaluated on the ASL baseline, the 26 letters A to Z of the Kaggle ASL Alphabet training folder, because we have no PSL photos yet. The split is a single 70/15/15 hold-out split into train, validation and test, built by \texttt{data\_scripts/build\_split\_pool.py} and \texttt{src/signbridge/data/splits.py} and saved in \texttt{data/processed/split\_v1.csv}.
 

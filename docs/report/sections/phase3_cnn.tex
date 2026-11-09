@@ -3,7 +3,7 @@
 
 \subsection{Framework and Model}
 
-The image classifier is implemented in PyTorch with torchvision. The repository pins the CPU builds that were used for development, \texttt{torch 2.15.0+cpu} and \texttt{torchvision 0.29.2+cpu}, in \texttt{requirements-ml.txt}; the same code runs unchanged on a CUDA machine when a GPU build of PyTorch is installed. The base network is torchvision's MobileNetV2. With \texttt{pretrained: true} the weights are loaded from \texttt{MobileNet\_V2\_Weights.IMAGENET1K\_V1}; tests set the flag to false so that no download is needed.
+The image classifier is implemented in PyTorch with torchvision. The repository pins the CPU builds that were used for development, \texttt{torch 2.15.0+cpu} and \texttt{torchvision 0.29.2+cpu}, in \texttt{requirements-ml.txt}; the same code runs unchanged on a CUDA machine when a GPU build of PyTorch is installed. The real tuning and final runs were done on a cloud T4 GPU with a CUDA build; the CPU pins are for local development and tests. The base network is torchvision's MobileNetV2. With \texttt{pretrained: true} the weights are loaded from \texttt{MobileNet\_V2\_Weights.IMAGENET1K\_V1}; tests set the flag to false so that no download is needed.
 
 MobileNetV2 is a convolutional network built from inverted residual blocks with depthwise separable convolutions. It was chosen because it is small enough to train and run on a CPU, it is available with ImageNet weights, and its 1{,}280-dimensional final feature vector is a convenient input to a new classifier. The network is used as a feature extractor; only the last part of it is fine-tuned (Section~\ref{sec:cnn-freezing}).
 
@@ -32,7 +32,7 @@ Batch Normalisation needs separate handling. A BatchNorm layer computes its outp
 
 The loss is cross-entropy with label smoothing 0.1. Label smoothing prevents the model from becoming over-confident on the training set and is a standard regulariser for image classification.
 
-The optimiser is AdamW with two parameter groups. The new classifier head uses the learning rate from the configuration, 0.001 by default, and the trainable part of the backbone uses that rate multiplied by \texttt{backbone\_lr\_mult}, 0.1 by default. Fine-tuning a pretrained backbone at a smaller rate than a randomly initialised head is the usual practice: the pretrained filters already carry useful features and should not be overwritten by large early updates. Weight decay is 0.0001.
+The optimiser is AdamW with two parameter groups. The new classifier head uses the learning rate from the configuration, 0.001 by default, and the trainable part of the backbone uses that rate multiplied by \texttt{backbone\_lr\_mult}, 0.1 by default. Fine-tuning a pretrained backbone at a smaller rate than a randomly initialised head is the usual practice: the pretrained filters already carry useful features and should not be overwritten by large early updates. The final configuration uses the winning trial's weight decay, 0.001.
 
 The learning-rate scheduler is selected in the configuration. \texttt{cosine} uses \texttt{CosineAnnealingLR} with the number of epochs as its period; \texttt{step} uses \texttt{StepLR} with a step size of one third of the run and a factor of 0.1. The current configuration uses cosine annealing. The scheduler is stepped once per epoch, after validation.
 
