@@ -21,7 +21,7 @@ The ASL baseline consists of video frames, and the number of distinct signers be
 
 \subsection{Small Compute Budget}
 
-All training runs on a CPU. The measured cost is about 3.2 seconds per training batch at $224\times224$ and batch size 32, which puts 10 epochs at roughly 1.5 hours for 300 images per class and 2 hours for 400, and makes a 12-trial search expensive. The runbook therefore uses 8 short trials and a final run of 10 epochs with early stopping. A larger compute budget would allow more trials, more epochs or a larger subset.
+The long runs were done on a free cloud T4 GPU, not on the project laptop. The tuning search ran 12 trials of 3 epochs, about 26 minutes of training in total, and the final run stopped after 9 of the 12 configured epochs, about 6 minutes. The GPU took about 0.15 seconds per batch at $224\times224$ and batch size 32, against the 3.2 seconds per batch measured on the CPU, which is why the search and the final run were moved off the laptop. A larger budget would allow more trials, repeated seeds to measure run-to-run noise, more epochs or a larger subset. The split still uses 280 training images per class, so the results are limited by the data as well as by the search.
 
 \subsection{Static Letters Only}
 

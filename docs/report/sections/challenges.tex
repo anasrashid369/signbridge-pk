@@ -92,20 +92,20 @@ This section records problems the team actually ran into while setting up the re
 \subsection{The CPU Time Budget}
 \label{sec:challenge-cpu}
 
-\textbf{What happened.} The CNN was developed on a machine without CUDA. A timing run at $224\times224$ pixels, batch size 32 and the last two feature blocks unfrozen showed that the CPU cost per batch is high enough to make the original plan expensive: 12 tuning trials of 3 epochs at 400 images per class would take many hours, before the final run.
+\textbf{What happened.} The CNN was developed on a machine without CUDA. A timing run at $224\times224$ pixels, batch size 32 and the last two feature blocks unfrozen measured about 3.2 seconds per batch on the CPU, which put 12 tuning trials of 3 epochs and a 12-epoch final run at many hours on the CPU.
 
-\textbf{How we handled it.} We kept the tuning rule but reduced the search to 8 trials and the training split to 300 images per class for this deliverable, with a final run of 10 epochs. Validation and test stay complete, so the scores remain comparable. The new preflight command measures the actual machine and estimates one epoch, the whole search and the final run before any long job starts, and the Colab/Kaggle recipe is documented for a GPU runtime.
+\textbf{How we handled it.} We kept the search and the split at 400 images per class (280 in train), moved the long runs to a free cloud T4 GPU, and measured the cost before starting. On the T4 a batch took about 0.15 seconds; the 12 trials of 3 epochs took about 26 minutes of training and the final run stopped after 9 epochs in about 6 minutes. The preflight command estimates one epoch, the whole search and the final run before any long job starts, and validation and test stay complete, so the scores remain comparable.
 
-\textbf{What we learned.} Compute should be measured before it is committed. Capping only the training split is a defensible compromise; changing validation or test would make runs incomparable.
+\textbf{What we learned.} Compute should be measured before it is committed, and moving the job to a GPU was cheaper than shrinking the training data. The 12-trial, 3-epoch search is still short: it ranks configurations but does not prove that the winner is better than the runner-up by more than seed noise.
 
 \subsection{Waiting for the Shared Split File}
 \label{sec:challenge-split}
 
-\textbf{What happened.} Every training command reads \texttt{data/processed/split\_v1.csv}, but that file was not on \texttt{main} when the CNN code was finished. Training, tuning and the final predictions could not start.
+\textbf{What happened.} Every training command reads \texttt{data/processed/split\_v1.csv}, but that file was not on \texttt{main} when the CNN code was finished. A 520-row placeholder split with the real file name was committed before the real split existed, so a training run on \texttt{main} would silently have used it. Training, tuning and the final predictions could not start.
 
-\textbf{How we handled it.} The code was written and tested against a scratch split outside the repository, and \texttt{tools/check\_split.py} was added so the real file can be checked before a run. We did not invent a split or silently write a fallback.
+\textbf{How we handled it.} The code was written and tested against a scratch split outside the repository, and \texttt{tools/check\_split.py} was added so the real file can be checked before a run. We did not invent a split or silently write a fallback. The fake file was replaced by the real 10{,}400-row split, and the real tuning and final runs were completed on it.
 
-\textbf{Still open.} The real runs wait for the data lead's committed split file. A fallback split would have to reuse the existing near-duplicate grouping, be labelled as a fallback, and be agreed before it is written.
+\textbf{What we learned.} A placeholder that uses the real filename is worse than a missing file, because nothing in a training command can tell the difference. The file is now checked before a run, and a fallback would have to be labelled as one and agreed before it is written.
 
 \subsection{A Dependency Conflict in the ML Requirements}
 \label{sec:challenge-deps}
@@ -120,6 +120,15 @@ This section records problems the team actually ran into while setting up the re
 \textbf{What happened.} \texttt{requirements-ml.txt} pins the \texttt{+cpu} builds of PyTorch and torchvision. Running that file on Colab or Kaggle would replace the preinstalled CUDA build and quietly move training back to the CPU.
 
 \textbf{How we fixed it.} The remote recipe installs only \texttt{requirements.txt} and the editable package, checks \path{torch.cuda.is_available()} and the GPU name, and then runs \path{signbridge.preflight} before any training. The local CPU install remains the documented one for this machine.
+
+\subsection{Frozen BatchNorm Layers That Kept Training}
+\label{sec:challenge-frozen-bn}
+
+\textbf{What happened.} The training loop called \texttt{model.train()} and then put every frozen BatchNorm layer back into evaluation mode, but \texttt{train\_one\_epoch} called \texttt{model.train()} again at its start. That second call returned the frozen layers to training mode, so their running mean and variance could drift even though their weights were fixed.
+
+\textbf{How we fixed it.} \texttt{train\_one\_epoch} now takes a \texttt{freeze\_batchnorm} flag and repeats the evaluation-mode switch after its own \texttt{model.train()}. The CNN training and the preflight pass the flag; a unit test freezes a BatchNorm layer and checks that it is still in evaluation mode after one epoch.
+
+\textbf{What we learned.} A mode switch is easy to undo by accident. The invariant ``frozen means evaluation mode'' has to be enforced after every call that changes the mode, and tested.
 
 \subsection{A Commit Script That Assumed the Repository Root}
 \label{sec:challenge-commit-script}
