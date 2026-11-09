@@ -1,4 +1,49 @@
 \section{Error Analysis}
 \label{sec:error-analysis}
 
-\todobox{Aliza: analyse the misclassified validation and test images from \texttt{reports/predictions/}, including the most confused letter pairs, the effect of missing hand detections, and representative examples.}
+This section studies the mistakes of the CNN on the test split, using \texttt{src/signbridge/evaluation/error\_analysis.py} on \texttt{reports/predictions/cnn\_test.npz}. The CNN made 32 mistakes on the 1{,}560 test images (2.05\%). With so few mistakes, every count below is small, and one image changes a per-letter recall by 1.7 percentage points. The patterns are therefore observations, not firm findings. The landmark models are not part of this section.
+
+\subsection{Which Letters Are Confused}
+
+Table~\ref{tab:confused-pairs} lists the ten most frequent confusions. Seven pairs occurred twice and three occurred once, so these ten pairs cover 17 of the 32 mistakes. The other 15 mistakes are spread over pairs that occur once each, so there is no single dominant confusion.
+
+\begin{table}[htbp]
+  \centering
+  \caption{The ten most frequent confusions of the CNN on the test split (ASL baseline), from \texttt{reports/errors/confused\_pairs.csv}.}
+  \label{tab:confused-pairs}
+  \begin{tabular}{llr}
+    \toprule
+    True letter & Predicted letter & Images \\
+    \midrule
+    H & J & 2 \\
+    H & P & 2 \\
+    I & E & 2 \\
+    T & S & 2 \\
+    U & R & 2 \\
+    X & S & 2 \\
+    Z & Y & 2 \\
+    E & A & 1 \\
+    E & S & 1 \\
+    I & K & 1 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\safefigure{cnn_test_confusion.png}{Confusion matrix of the CNN on the test split (ASL baseline, 60 images per letter). Rows are the true letters and columns the predicted letters.}{fig:cnn-test-confusion}
+
+\subsection{Which Letters Are Hardest}
+
+Eight letters (B, C, D, F, G, L, O and Q) have no mistake at all on the test split. The lowest F1 scores are X (0.942), S (0.943), I (0.957) and T (0.958); the full table is in \texttt{reports/errors/per\_class.csv}. S has the lowest precision (0.921) because other letters are predicted as S: T, X and E each contributed. H and I have the lowest recall (0.933 each, 4 of 60 images wrong). Several of the weak letters are hand shapes that look alike in a still photograph: A, E, S and T are all closed fists that differ by where the thumb sits, and U and R differ by whether two fingers are crossed. We did not test these explanations, for example by measuring how similar the images of such pairs are, so they are our reading of the hand shapes and not a result.
+
+\subsection{Examples}
+
+Figure~\ref{fig:cnn-misclassified} shows the 12 test images that the CNN got wrong with the highest confidence. Each title gives the true letter, the predicted letter and the probability the CNN gave to its answer. The grid is the quickest way to see whether a mistake looks like a model weakness or like a problem with the image.
+
+\safefigure{cnn_test_misclassified.png}{The 12 test images the CNN misclassified with the highest confidence (ASL baseline). Titles give the true letter, the predicted letter and the CNN's probability for its prediction.}{fig:cnn-misclassified}
+
+\subsection{Limits of this Analysis}
+\begin{itemize}
+  \item Only 32 mistakes are available, and the test split was used once, so we did not look for further patterns by trying more cuts of the data.
+  \item The test images share look-alike frames with the training images (Section~\ref{sec:limitations}), so the mistakes are those of an easier test than a new signer would present. The mistakes we see are probably not the mistakes a new person would trigger.
+  \item The analysis covers the CNN only. The effect of a missing hand detection on the CNN is in Section~\ref{sec:bias-check}.
+\end{itemize}
