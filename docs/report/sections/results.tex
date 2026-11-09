@@ -5,10 +5,14 @@
 
 \subsection{CNN Training Curves}
 
-The two figures below show the nine epochs of the final CNN run. Training loss falls in every epoch, from 1.549 to 0.766, and training accuracy rises from 0.728 to 0.992. Validation loss falls from 1.086 to a minimum of 0.810 at epoch 9, but validation accuracy and macro-F1 peak at epoch 6, both at 0.9686, and are lower afterwards. The widening gap between training and validation accuracy after epoch 6 is the overfitting that early stopping is meant to catch, and the checkpoint from epoch 6 was kept. The run stopped after epoch 9 because the validation macro-F1 had not improved for three consecutive epochs.
+The two figures below show the nine epochs of the final CNN run. Training loss falls in every epoch, from 1.549 to 0.766, and training accuracy rises from 0.728 to 0.992. Validation loss falls from 1.086 to a minimum of 0.810 at epoch 9, but validation accuracy and macro-F1 peak at epoch 6, both at 0.9686, and are lower afterwards. The widening gap between training and validation accuracy after epoch 6 is the overfitting that early stopping is meant to catch, and the checkpoint from epoch 6 was kept. The run stopped after epoch 9 because the validation macro-F1 had not improved for three consecutive epochs. The validation scores are optimistic: the split still contains near-duplicate images shared with the training set (Section~\ref{sec:limitations}), so 0.9686 is not an estimate of accuracy on new signers.
 
 \safefigure{cnn_loss_curve.png}{Training and validation loss per epoch for the final CNN run, from \texttt{reports/training/cnn\_history.csv}.}{fig:cnn-loss}
 
 \safefigure{cnn_accuracy_curve.png}{Training and validation accuracy per epoch for the final CNN run, from \texttt{reports/training/cnn\_history.csv}.}{fig:cnn-accuracy}
+
+\subsection{Model Weights and Run Provenance}
+
+The trained CNN checkpoint is not committed because it is a binary file. It is hosted on Google Drive at \url{https://drive.google.com/file/d/1bU0j8pdX5LEu9MLdJIy_xPGXsd14twWJ/view?usp=drive_link}; download it, place it at \texttt{models/cnn\_best.pt}, and load it with the model definition in \texttt{signbridge.models.cnn} and the settings in \texttt{configs/cnn.yaml}. The tuning and final runs that produced the committed validation and test prediction files used the tree at commit \texttt{bbab5a82494604f99fd5fb9961562d00d916b22d}, and the results were merged to \texttt{main} in commit \texttt{290b97202cbf37eff43781a8690ea484753c8495}. The GPU run used a Colab T4 instance with \texttt{torch 2.14.1+cu130}; the CPU builds pinned in \texttt{requirements-ml.txt} are for local development and tests.
 
 \todobox{Owners: add the remaining result figures and tables for the landmark models and the model comparison here.}
