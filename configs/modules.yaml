@@ -16,12 +16,16 @@ modules:
       - .github/**
       - .gitignore
       - .mailmap
-      - README.md
       - pyproject.toml
       - requirements.txt
       - requirements-dev.txt
       - requirements-ml.txt
       - src/signbridge/__init__.py
+
+  readme:
+    owner: Shared
+    paths:
+      - README.md
 
   protocol:
     owner: Aliza
@@ -66,6 +70,9 @@ modules:
     owner: Aliza
     paths:
       - src/signbridge/data/splits.py
+      - data_scripts/build_split_pool.py
+      - data/processed/split_v1.csv
+      - reports/split_pool_summary.csv
 
   evaluation:
     owner: Aliza
@@ -99,6 +106,7 @@ modules:
     paths:
       - src/signbridge/training/**
       - src/signbridge/train_cnn.py
+      - src/signbridge/preflight.py
 
   cnn_tuning:
     owner: Anas

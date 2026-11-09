@@ -33,6 +33,7 @@ data/processed/*
 !data/processed/manifest.csv
 !data/processed/label_map.json
 !data/processed/split_v1.csv
+!data/processed/landmark_detections_split.csv
 
 # Tuning and scratch prediction files (final val/test predictions are committed)
 reports/predictions/runs/
