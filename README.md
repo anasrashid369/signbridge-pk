@@ -284,6 +284,12 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+Dry-run notes from a Colab T4 session:
+
+- Colab ran Python 3.13 and the pins in `requirements.txt` installed cleanly there; Kaggle accepts the same pins.
+- After the two `pip install` commands, restart the runtime once (`Runtime > Restart session`), then run `%cd /content/signbridge-pk` again before the next command.
+- `requirements-ml.txt` is never installed on Colab or Kaggle.
+
 Confirm that CUDA is visible before spending time on training:
 
 ```bash
@@ -293,9 +299,10 @@ nvidia-smi
 
 `CUDA True` and a GPU name in both commands mean the runtime is ready. If `CUDA` is `False`, stop and choose a GPU runtime; the commands still run on the CPU, but the time estimates assume a GPU.
 
-Upload the subset zip to the runtime, or download it from the project's external storage, and unpack it. The split file and `label_map.json` come from the repository; the raw images do not:
+Upload the subset zip to the runtime, or download it from the project's external storage, and unpack it. The split file and `label_map.json` come from the repository; the raw images do not. In Colab, upload `asl_subset.zip` through Drive and unzip it from the mounted folder; if `drive.mount` fails, upload the zip through the Files panel and unzip from `/content/asl_subset.zip`. Create the target folder first:
 
 ```bash
+mkdir -p data/raw/asl_subset
 unzip PATH/TO/subset.zip -d data/raw/asl_subset
 python -m signbridge.preflight --config configs/cnn.yaml --split-file data/processed/split_v1.csv --image-root data/raw/asl_subset
 ```
