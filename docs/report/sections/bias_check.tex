@@ -1,4 +1,52 @@
 \section{Bias Check}
 \label{sec:bias-check}
 
-\todobox{Aliza: report the bias checks that the available labels allow, such as metrics by letter and by image brightness or blur, and state clearly that no demographic bias assessment is possible because the dataset has no demographic labels and no PSL volunteers were photographed.}
+\subsection{What We Can and Cannot Check}
+
+The ASL baseline has no demographic labels. We have no signer identifiers, skin tone, gender or age for any image, and no PSL volunteers were photographed. We therefore make \emph{no claim} about whether the CNN works equally well for different skin tones, genders, signers or hand sizes, and the model has not been assessed for PSL users. The only checks the data allows are on properties we can measure from the image itself: its brightness, its sharpness, and whether MediaPipe found a hand in it. These are image quality checks. They are not a fairness assessment, and a good result on them says nothing about fairness between people.
+
+\subsection{Method}
+
+The check is run by \texttt{src/signbridge/evaluation/bias.py} on the CNN predictions for the 1{,}560 test images. Brightness (the mean grey level) and blur (the variance of the Laplacian, where a higher value means a sharper image) are measured with the same function as the cleaning script of Section~\ref{sec:data-cleaning}, and each is cut into four groups of equal size (quartiles) at the values in Table~\ref{tab:bias-groups}. The hand groups use the detection table of the landmark pipeline (\texttt{landmark\_detections\_split.csv}), which records whether MediaPipe found a hand in each image; the CNN itself does not use MediaPipe. For every group the table gives the accuracy and macro-F1 with a 95\% bootstrap interval from 1{,}000 resamples. A group with fewer than 30 images would be flagged; none is. The bootstrap resamples images, not groups of look-alike images, so the intervals are narrower than they should be and the true uncertainty is larger.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Accuracy and macro-F1 of the CNN on the test split by image property (ASL baseline), with 95\% bootstrap intervals. Source: \texttt{reports/bias/cnn\_test\_subgroups.csv}.}
+  \label{tab:bias-groups}
+  \small
+  \begin{tabular}{llrcc}
+    \toprule
+    Property & Group & Images & Accuracy [95\% interval] & Macro-F1 \\
+    \midrule
+    Brightness & below 114.6 & 390 & 0.972 [0.954, 0.987] & 0.966 \\
+    Brightness & 114.6 to 130.8 & 390 & 0.995 [0.987, 1.000] & 0.996 \\
+    Brightness & 130.8 to 143.7 & 390 & 0.987 [0.974, 0.997] & 0.986 \\
+    Brightness & 143.7 and above & 390 & 0.964 [0.944, 0.982] & 0.948 \\
+    \midrule
+    Blur & below 854.4 & 390 & 0.985 [0.972, 0.995] & 0.980 \\
+    Blur & 854.4 to 1087.3 & 390 & 0.985 [0.972, 0.995] & 0.984 \\
+    Blur & 1087.3 to 1212.9 & 390 & 0.969 [0.951, 0.985] & 0.977 \\
+    Blur & 1212.9 and above & 390 & 0.979 [0.967, 0.992] & 0.966 \\
+    \midrule
+    Hand & detected & 1090 & 0.978 [0.969, 0.986] & 0.979 \\
+    Hand & not detected & 470 & 0.983 [0.970, 0.994] & 0.977 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\safefigure{cnn_test_subgroups.png}{Accuracy of the CNN on the test split by brightness, blur and hand detection, with 95\% bootstrap intervals (ASL baseline).}{fig:bias-subgroups}
+
+\subsection{Reading the Results}
+\begin{itemize}
+  \item \textbf{Blur and hand detection show no clear difference.} The accuracy of the four blur groups lies between 0.969 and 0.985 and their intervals overlap. Images where no hand was found (30\% of the test split) score 0.983 against 0.978 for images where one was found, which is within the uncertainty.
+  \item \textbf{Brightness shows a small pattern.} The two middle brightness groups scored higher (0.995 and 0.987) than the darkest (0.972) and the brightest (0.964) groups. The intervals of the second and fourth group do not overlap, but we did not run a significance test, the intervals are too narrow for the reason given above, and we looked at three properties, so a difference of this size could be chance. We read it as a possible weakness at the brightness extremes that is worth checking with more data, not as a finding.
+  \item \textbf{The differences are small in size.} The lowest accuracy in any group is 0.964, only about 3 points below the overall 0.9795, and each group holds only 390 images.
+\end{itemize}
+
+\subsection{Limits}
+\begin{itemize}
+  \item Brightness, blur and hand detection describe the photographs, not the people. A uniform result across them does not show that the CNN is fair across skin tones, signers or genders; we could not measure that.
+  \item All groups come from one dataset, with its own backgrounds and lighting. The check does not cover other cameras or settings.
+  \item The test images share look-alike frames with the training images (Section~\ref{sec:limitations}), so the group scores are optimistic, and a harder test could separate the groups more.
+  \item PSL is not assessed. A bias check on PSL needs PSL photographs with consent and, if the group agrees, signer information, which we do not have.
+\end{itemize}
