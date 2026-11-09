@@ -1,0 +1,5 @@
+split,images,detected,detection_rate
+train,7280,5475,0.7521
+val,1560,1095,0.7019
+test,1560,1090,0.6987
+all,10400,7660,0.7365
