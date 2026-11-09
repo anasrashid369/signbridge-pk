@@ -2,6 +2,8 @@
 # Settings for the landmark models (SVM, Random Forest, MLP).
 # Seeds, the split file, the label map and data paths come from configs/data.yaml.
 # All paths below are relative to the repository root.
+# The model settings below are the winners of the validation-only search
+# (reports/tuning/landmark_trials.csv): svm-14, forest-06 and mlp-16.
 
 # --- Input -------------------------------------------------------------
 input_dim: 63                 # 21 landmarks x (x, y, z), normalised by the wrist
@@ -9,26 +11,25 @@ n_classes: 26                 # A-Z, class order from data/processed/label_map.j
 
 # --- SVM ---------------------------------------------------------------
 svm:
-  C: 10.0                     # regularisation: larger C fits the training data harder
-  gamma: scale                # RBF kernel width: "scale" or a positive number
- # Probabilities are produced through CalibratedClassifierCV.
+  C: 100                      # regularisation: larger C fits the training data harder (svm-14)
+  gamma: 0.01                 # RBF kernel width: "scale" or a positive number (svm-14)
+  # Probabilities are produced through CalibratedClassifierCV.
 
 # --- Random Forest -----------------------------------------------------
 forest:
-  n_estimators: 300           # number of trees
-  max_depth: null             # null = grow until pure; an integer limits overfitting
+  n_estimators: 300           # number of trees (forest-06)
+  max_depth: 20               # null = grow until pure; an integer limits overfitting (forest-06)
 
 # --- MLP (PyTorch) -----------------------------------------------------
 mlp:
-  hidden_size: 128            # units in each hidden layer
+  hidden_size: 256            # units in each hidden layer (mlp-16)
   n_hidden_layers: 2          # number of hidden layers
-  dropout: 0.3                # dropout probability after each hidden layer
-  learning_rate: 0.001        # AdamW learning rate
-  weight_decay: 0.0001        # AdamW weight decay
-  batch_size: 64              # samples per gradient step
+  dropout: 0.1                # dropout probability after each hidden layer (mlp-16)
+  learning_rate: 0.003        # AdamW learning rate (mlp-16)
+  weight_decay: 0.0001        # AdamW weight decay (mlp-16)
+  batch_size: 64              # samples per gradient step (mlp-16)
   epochs: 100                 # upper limit; early stopping usually ends sooner
   patience: 10                # stop after this many epochs without validation macro-F1 gain
-
 
 # --- Tuning (validation split ONLY, never the test split) ---------------
 tuning:
@@ -45,7 +46,6 @@ tuning:
   mlp_max_trials: 20                               # ... of which this many are sampled (seeded)
 
 # --- Outputs -----------------------------------------------------------
-
 output:
   predictions_dir: reports/predictions             # FINAL val/test prediction files (committed)
   runs_dir: reports/predictions/runs               # scratch and tuning runs (ignored by Git)
