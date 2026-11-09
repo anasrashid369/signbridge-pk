@@ -8,7 +8,7 @@ People who sign in PSL and people who do not know it often have no shared langua
 
 ## Status
 
-Deliverable 1 (Problem Definition and Data Acquisition) is complete for the ASL baseline: download, cleaning, raw-data charts, landmark extraction and feature charts all run on it. PSL photo collection has not started yet (0 volunteers, 0 photos); it continues in Deliverable 2, where the PSL letter set is also fixed from a cited source. Deliverable 2 adds the MobileNetV2 CNN, the split-driven image dataset, training and tuning commands, and the Contribution Table tooling. Real CNN runs wait for the shared split file from the data lead. The app arrives in Deliverable 3.
+Deliverable 1 (Problem Definition and Data Acquisition) is complete for the ASL baseline: download, cleaning, raw-data charts, landmark extraction and feature charts all run on it. PSL photo collection has not started yet (0 volunteers, 0 photos); it continues in Deliverable 2, where the PSL letter set is also fixed from a cited source. Deliverable 2 adds the MobileNetV2 CNN, the split-driven image dataset, training and tuning commands, and the Contribution Table tooling. The real CNN tuning and final run are complete on the shared split: 12 tuning trials of 3 epochs, and a final run that stopped after 9 of its 12 configured epochs with a best validation macro-F1 of 0.9686 at epoch 6 and a test macro-F1 of 0.9795, read once after the hyperparameters were frozen. The app arrives in Deliverable 3.
 
 ## Repository Layout
 
@@ -321,7 +321,7 @@ This reads `configs/modules.yaml`, counts non-merge commits per author for every
 
 The trained checkpoint is not committed because it is a binary file. It is hosted externally:
 
-**Weights link (placeholder):** _TODO: replace this line with the Google Drive link after uploading `cnn_best.pt`._
+**Weights:** [cnn_best.pt on Google Drive](https://drive.google.com/file/d/1bU0j8pdX5LEu9MLdJIy_xPGXsd14twWJ/view?usp=drive_link)
 
 Download the file, place it at `models/cnn_best.pt`, and use `torch.load` with the same model definition from `signbridge.models.cnn`. Never invent or commit the link.
 

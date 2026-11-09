@@ -22,11 +22,11 @@ model:
   unfreeze_blocks: 2                      # last N modules of model.features to train; 0 = head only
 
 train:
-  epochs: 12                              # final run: 10-15 epochs with early stopping
+  epochs: 12                              # final run: 12 epochs with early stopping (stopped at 9)
   batch_size: 32                          # images per batch
   lr: 0.001                               # learning rate for the new classifier head
   backbone_lr_mult: 0.1                   # backbone learning rate = lr times this value
-  weight_decay: 0.0001                    # AdamW weight decay
+  weight_decay: 0.001                     # AdamW weight decay (winner of trial_008)
   label_smoothing: 0.1                    # CrossEntropyLoss label smoothing
   scheduler: cosine                       # cosine or step
   patience: 3                             # early-stopping patience on validation macro-F1
