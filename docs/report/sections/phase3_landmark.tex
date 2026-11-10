@@ -94,7 +94,7 @@ Only the detected images are used: 5{,}475 for training, 1{,}095 for validation 
 
 \subsection{Final Scores}
 
-The final run trained the three families with the committed settings and wrote the validation and test predictions in one command, run once. On validation the SVM had the highest macro-F1 (0.9683), ahead of the MLP (0.9678) and the forest (0.9495), so the SVM is the landmark model (Section~\ref{sec:landmark-hyperparameters}). Table~\ref{tab:landmark-scores} shows its scores, computed with the shared evaluation code on the detected images only.
+The final run trained the three families with the committed settings and wrote the validation and test predictions in one command, run once. On validation the SVM scored 0.9683, the MLP 0.9678 and the forest 0.9495; the SVM leads the MLP by 0.0005, less than one validation image, and by the committed rule the SVM is the landmark model (Section~\ref{sec:landmark-hyperparameters}). Table~\ref{tab:landmark-scores} shows its scores, computed with the shared evaluation code on the detected images only.
 
 \begin{table}[htbp]
 \centering
@@ -131,4 +131,4 @@ Figure~\ref{fig:landmark-mlp-curves} shows the loss and accuracy of the final ML
   \todobox{Missing figure \texttt{reports/figures/landmark\_mlp\_curves.png}. Make it with \texttt{python -m signbridge.plot\_landmark\_curves}.}
 }
 
-The validation loss was 0.2245 at epoch 22, lowest at epoch 24, and 0.3106 at epoch 32. Over the same epochs the training loss stayed between 0.055 and 0.064, and the validation macro-F1 fell to 0.9553. This points to mild overfitting after about epoch 22 to 24, which is why the best weights are restored. The gap between training accuracy (0.9799) and validation accuracy (0.9717) at epoch 22 is about 0.8 percentage points. The training loss is averaged over the epoch with dropout active, and the validation loss is computed with dropout off, so the two losses are not directly comparable.
+The validation loss was 0.2245 at epoch 22, lowest at epoch 24, and 0.3106 at epoch 32. Over the same epochs the training loss stayed between 0.034 and 0.080, and the validation macro-F1 fell to 0.9553. This points to mild overfitting after about epoch 22 to 24, which is why the best weights are restored. The gap between training accuracy (0.9799) and validation accuracy (0.9717) at epoch 22 is about 0.8 percentage points. The training loss is averaged over the epoch with dropout active, and the validation loss is computed with dropout off, so the two losses are not directly comparable.
