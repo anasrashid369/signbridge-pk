@@ -171,3 +171,24 @@ This section records problems the team actually ran into while setting up the re
 \textbf{What happened.} A pull request failed the continuous-integration lint step because of an unsorted import block, although the same check had passed locally. Separately, a local test run stopped at collection with \texttt{WinError 1455} (the paging file is too small) while loading PyTorch, and every later test file that imports PyTorch then failed with the same cascade.
 
 \textbf{How we handled it.} The lint error was fixed with \texttt{ruff -{}-fix} in a new commit. The test run was repeated after closing other programs, and all tests then passed.
+
+\subsection{Interrupted Extraction of the Image Archive}
+\label{sec:challenge-interrupted-unzip}
+
+\textbf{What happened.} The archive with exactly the split images was first extracted straight from the synced desktop folder. The command was interrupted and then run a second time into the same folder, which printed hundreds of ``file already exists'' errors. The folder held 1{,}109 files instead of 10{,}400.
+
+\textbf{How we handled it.} The incomplete folder was deleted and the archive copied to a plain folder on the same drive and extracted once. The file count (10{,}400) and a check that every path of \texttt{split\_v1.csv} exists and is not empty (0 missing) were run before extraction of the landmarks started.
+
+\subsection{Low Hand Detection Rate for Some Letters}
+\label{sec:challenge-detection-rate}
+
+\textbf{What happened.} MediaPipe found a hand in 7{,}660 of the 10{,}400 images (73.7\%). The rate was 32.5\% for N, 48.2\% for M and 60.5\% for A, against 95.5\% for F. The landmark model therefore sees 1{,}090 of the 1{,}560 test images, and the number of test images per letter is unbalanced (20 for A, 57 for F).
+
+\textbf{How we handled it.} We kept the confidence of 0.5 and report the detection rate per split and per letter. The landmark scores are given for the detected images only, and the comparison with the CNN uses the same images (Section~\ref{sec:landmark-models}).
+
+\subsection{MLP Score That Changed Between Search and Final Run}
+\label{sec:challenge-mlp-variation}
+
+\textbf{What happened.} The best MLP trial of the search scored a validation macro-F1 of 0.9716, but retraining it with the same settings in the final run gave 0.9678, which is below the SVM (0.9683). The test split is read once, in that final run, so the choice of landmark model could not be revisited with test data.
+
+\textbf{How we handled it.} The committed selection rule picked the SVM, and the report states the difference and that we do not claim the SVM is better than the MLP. We did not find the cause and did not run other seeds.

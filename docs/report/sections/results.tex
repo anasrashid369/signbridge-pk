@@ -1,18 +1,68 @@
 \section{Results}
 \label{sec:results}
 
-\todobox{Aliza: report the final validation and test metrics for the CNN and the landmark models from the committed prediction files, and compare the models on the images where a hand was detected. Do not report a test result until the hyperparameters are frozen.}
+All results in this section describe the American Sign Language (ASL) baseline, not Pakistan Sign Language, and were computed with our own evaluation code (\texttt{src/signbridge/evaluation/}) from the prediction files in \texttt{reports/predictions/}. The metrics are defined in Section~\ref{sec:metrics}. The test split was used once, after the hyperparameters were frozen (Section~\ref{sec:validation}).
 
-\subsection{CNN Training Curves}
+\subsection{CNN}
 
-The two figures below show the nine epochs of the final CNN run. Training loss falls in every epoch, from 1.549 to 0.766, and training accuracy rises from 0.728 to 0.992. Validation loss falls from 1.086 to a minimum of 0.810 at epoch 9, but validation accuracy and macro-F1 peak at epoch 6, both at 0.9686, and are lower afterwards. The widening gap between training and validation accuracy after epoch 6 is the overfitting that early stopping is meant to catch, and the checkpoint from epoch 6 was kept. The run stopped after epoch 9 because the validation macro-F1 had not improved for three consecutive epochs. The validation scores are optimistic: the split still contains near-duplicate images shared with the training set (Section~\ref{sec:limitations}), so 0.9686 is not an estimate of accuracy on new signers.
+Table~\ref{tab:cnn-results} shows the validation and test metrics of the final CNN. Both splits hold 1{,}560 images, 60 per letter, so accuracy and macro recall are equal. The CNN made 49 mistakes on the validation split and 32 on the test split.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Metrics of the final CNN on the validation and test splits (ASL baseline). Source: \texttt{reports/metrics/cnn\_val\_metrics.json} and \texttt{cnn\_test\_metrics.json}. Macro values average the 26 letters.}
+  \label{tab:cnn-results}
+  \begin{tabular}{lcc}
+    \toprule
+    Metric & Validation & Test \\
+    \midrule
+    Images & 1{,}560 & 1{,}560 \\
+    Mistakes & 49 & 32 \\
+    Accuracy & 0.9686 & 0.9795 \\
+    Macro precision & 0.9694 & 0.9798 \\
+    Macro recall & 0.9686 & 0.9795 \\
+    Macro F1 & 0.9686 & 0.9795 \\
+    Macro AUC-ROC (one-vs-rest) & 0.9996 & 0.9998 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The test scores are 1.1 points higher than the validation scores. This is about 17 images out of 1{,}560, and we have no evidence that the difference means more than chance, since the two splits contain different images and, as Table~\ref{tab:cnn-results} shows, each letter has only 60 of them. The training and validation curves of the final run are in Figures~\ref{fig:cnn-loss} and~\ref{fig:cnn-accuracy}. The most confused letters and the weakest letters are in Section~\ref{sec:error-analysis}, and the scores by brightness, blur and hand detection are in Section~\ref{sec:bias-check}.
+
+The two figures below show the nine epochs of the final CNN run. Training loss falls in every epoch, from 1.549 to 0.766, and training accuracy rises from 0.728 to 0.992. Validation loss falls from 1.086 to a minimum of 0.810 at epoch 9, but validation accuracy and macro-F1 peak at epoch 6, both at 0.9686, and are lower afterwards. The widening gap between training and validation accuracy after epoch 6 is the overfitting that early stopping is meant to catch, and the checkpoint from epoch 6 was kept. The run stopped after epoch 9 because the validation macro-F1 had not improved for three consecutive epochs. How far these scores can be trusted is discussed in Section~\ref{sec:read-scores}.
 
 \safefigure{cnn_loss_curve.png}{Training and validation loss per epoch for the final CNN run, from \texttt{reports/training/cnn\_history.csv}.}{fig:cnn-loss}
 
 \safefigure{cnn_accuracy_curve.png}{Training and validation accuracy per epoch for the final CNN run, from \texttt{reports/training/cnn\_history.csv}.}{fig:cnn-accuracy}
 
+\subsection{How to Read These Scores}
+\label{sec:read-scores}
+
+The scores are close to 100\%, and they should not be read as the accuracy the system would have on new people. The ASL images are frames from short recordings, and our split removes only the nearest duplicates, so many validation and test images have a very similar training image of the same letter (Section~\ref{sec:limitations}): 20.3\% of the test images have a same-class training image within 4 bits of the image hash, 47.2\% within 6 bits and 70.0\% within 8 bits. The dataset also has no signer identifiers, so we cannot tell whether the same people appear in training and test. For both reasons the scores are optimistic, and we do not call the model robust. A fair estimate for new signers needs a person-wise split on data with signer labels, such as the PSL collection planned in Deliverable~1.
+
+\subsection{CNN Compared with the Landmark Models}
+
+The landmark models (Section~\ref{sec:landmark-models}) classify the 21 hand landmarks that MediaPipe finds in an image, so they can only give an answer for images where a hand was detected. This is 1{,}090 of the 1{,}560 test images (69.9\%). A comparison on all test images would favour the CNN, which answers every image, so Table~\ref{tab:common-set} compares all four models on the same 1{,}090 images (the common set), computed with \texttt{run\_metrics} and its \texttt{--restrict-to} option on the files in \texttt{reports/predictions/}. For reference, the CNN scores 0.9795 accuracy on all 1{,}560 test images (Table~\ref{tab:cnn-results}).
+
+\begin{table}[htbp]
+  \centering
+  \caption{CNN and landmark models on the common test set: the 1{,}090 test images where MediaPipe found a hand (ASL baseline). Mistakes are counted from the accuracy and rounded to a whole image.}
+  \label{tab:common-set}
+  \begin{tabular}{lcccc}
+    \toprule
+    Model & Accuracy & Macro F1 & Macro AUC-ROC & Mistakes \\
+    \midrule
+    CNN & 0.9780 & 0.9789 & 0.9998 & 24 \\
+    Landmark SVM & 0.9688 & 0.9660 & 0.9951 & 34 \\
+    Landmark MLP & 0.9606 & 0.9530 & 0.9983 & 43 \\
+    Landmark Random Forest & 0.9450 & 0.9376 & 0.9976 & 60 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+On accuracy and macro F1 the order is CNN, SVM, MLP, Random Forest. The CNN made 24 mistakes and the best landmark model, the SVM, made 34, a difference of 10 images out of 1{,}090. We did not run a significance test, and the test images share look-alike frames with the training images (Section~\ref{sec:limitations}), so we read this as a small advantage of the CNN on this data and not as proof that it is the better method. The order by AUC-ROC differs: the MLP (0.9983) is above the SVM (0.9951) although it has a lower accuracy, which means its probability scores rank the letters well but its top answer is more often wrong. AUC-ROC is close to 1 for all four models, so it separates them less than accuracy does.
+
+The landmark models also have a practical limit that the table hides: for the 470 test images (30.1\%) where no hand was detected they give no answer, whereas the CNN scores 0.983 accuracy on those images (Section~\ref{sec:bias-check}).
+
 \subsection{Model Weights and Run Provenance}
 
 The trained CNN checkpoint is not committed because it is a binary file. It is hosted on Google Drive at \url{https://drive.google.com/file/d/1bU0j8pdX5LEu9MLdJIy_xPGXsd14twWJ/view?usp=drive_link}; download it, place it at \texttt{models/cnn\_best.pt}, and load it with the model definition in \texttt{signbridge.models.cnn} and the settings in \texttt{configs/cnn.yaml}. The tuning and final runs that produced the committed validation and test prediction files used the tree at commit \texttt{bbab5a82494604f99fd5fb9961562d00d916b22d}, and the results were merged to \texttt{main} in commit \texttt{290b97202cbf37eff43781a8690ea484753c8495}. The GPU run used a Colab T4 instance with \texttt{torch 2.14.1+cu130}; the CPU builds pinned in \texttt{requirements-ml.txt} are for local development and tests.
-
-\todobox{Owners: add the remaining result figures and tables for the landmark models and the model comparison here.}

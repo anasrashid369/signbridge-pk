@@ -32,13 +32,13 @@ The landmark branch classifies a hand image in two stages. First, the MediaPipe 
 
 \subsection{Classical Baselines}
 
-\textbf{Support vector machine.} The SVM is a pipeline of a \texttt{StandardScaler} and an RBF-kernel \texttt{SVC}, with the regularisation $C$ and the kernel width $\gamma$ as hyperparameters. The AUC-ROC metric needs class probabilities, which an \texttt{SVC} does not give by default. The earlier plan was to switch on the \texttt{probability=True} option. In scikit-learn 1.9 that option is deprecated and planned for removal in version 1.11, so the \texttt{SVC} is wrapped in \texttt{CalibratedClassifierCV} with sigmoid calibration, 5 folds and \texttt{ensemble=False}. The calibrator is fitted on cross-validated decision values and the \texttt{SVC} is then refitted once on all training data. The output is an $n\times26$ matrix whose rows sum to 1, which is checked by a unit test. The calibration needs at least 5 training images per class and makes each SVM fit about six times more expensive than a plain \texttt{SVC}.
+\textbf{Support vector machine.} The SVM is a pipeline of a \texttt{StandardScaler} and an RBF-kernel \texttt{SVC}, with the regularisation $C$ and the kernel width $\gamma$ as hyperparameters. The AUC-ROC metric needs class probabilities, which an \texttt{SVC} does not give by default. The earlier plan was to switch on the \texttt{probability=True} option. In scikit-learn 1.9 that option is deprecated and planned for removal in version 1.11, so the \texttt{SVC} is wrapped in \texttt{CalibratedClassifierCV} with sigmoid calibration, 5 folds and \texttt{ensemble=False}. The calibrator is fitted on cross-validated decision values and the \texttt{SVC} is then refitted once on all training data, so every SVM fit trains the \texttt{SVC} six times. The output is an $n\times26$ matrix whose rows sum to 1, which is checked by a unit test. The calibration needs at least 5 training images per class.
 
 \textbf{Random forest.} The forest is a scikit-learn \texttt{RandomForestClassifier} with the number of trees and the maximum depth as hyperparameters. Tree models do not depend on feature scale, so no scaler is used.
 
 \subsection{Multilayer Perceptron}
 
-The MLP takes the 63 landmark values after standardisation. The mean and standard deviation are computed on the training split only. Each hidden block is a linear layer, a ReLU activation and dropout, and the output layer is a linear layer with 26 logits (Table~\ref{tab:landmark-mlp-layers}). The number of hidden layers is fixed by the configuration, while the hidden width and the dropout probability are tuned (Section~\ref{sec:landmark-hyperparameters}).
+The MLP takes the 63 landmark values after standardisation. The mean and standard deviation are computed on the training split only. Each hidden block is a linear layer, a ReLU activation and dropout, and the output layer is a linear layer with 26 logits (Table~\ref{tab:landmark-mlp-layers}). The number of hidden layers is fixed at two, while the hidden width and the dropout probability are tuned (Section~\ref{sec:landmark-hyperparameters}). With the settings of the best search trial (width 256) the network has $63\cdot256+256 + 256\cdot256+256 + 256\cdot26+26 = 88{,}858$ trainable parameters, computed from the layer sizes.
 
 \begin{table}[htbp]
 \centering
@@ -57,20 +57,78 @@ Linear & 26 & logits, one per letter \\
 
 \textbf{Loss.} The loss is \texttt{CrossEntropyLoss}. It combines a log-softmax with the negative log-likelihood, so the network outputs raw logits and the softmax is applied only when probabilities are needed. Cross-entropy is the standard choice for a single-label problem with 26 mutually exclusive classes.
 
-\textbf{Optimiser.} Training uses AdamW, which applies weight decay separately from the gradient step. Learning rate, weight decay and batch size are tuned. Batches are shuffled with a seeded generator, so a run with the same seed gives the same loss curve.
+\textbf{Optimiser.} Training uses AdamW, which applies weight decay separately from the gradient step. Learning rate, weight decay and batch size are tuned. Batches are shuffled with a seeded generator.
 
 \textbf{Early stopping.} Training runs for at most 100 epochs. After each epoch the model is scored on the validation split, with dropout switched off. If the validation macro-F1 does not improve for 10 epochs, training stops and the weights of the best epoch are restored. Loss and accuracy of both splits are written for every epoch to \texttt{reports/tuning/mlp\_history.csv}, which gives the learning curves.
 
 \subsection{Training Procedure and Use of the Splits}
 
-One command trains the models and writes the predictions: \texttt{python -m signbridge.train\_landmark}. The seed comes from \texttt{configs/data.yaml} and is logged. The shared group-aware split (Section~\ref{sec:validation-strategy}) has 280 training, 60 validation and 60 test images per letter, before images without a detected hand are removed. The validation split is used for early stopping and for all hyperparameter selection. The test split is read only by the final run (\texttt{--final --evaluate-test}), which happens once, after the chosen settings have been committed to \texttt{configs/landmark.yaml}. The family with the highest validation macro-F1 is treated as the landmark model, and its prediction files are copied to \texttt{reports/predictions/landmark\_val.npz} and \texttt{landmark\_test.npz}. The files of the other families are kept next to them. No cross-validation was run.
+One command trains the models and writes the predictions: \texttt{python -m signbridge.train\_landmark}. The seed comes from \texttt{configs/data.yaml} and is logged. The shared group-aware split (Section~\ref{sec:validation}) has 280 training, 60 validation and 60 test images per letter, before images without a detected hand are removed. The validation split is used for early stopping and for all hyperparameter selection. The test split is read only by the final run (\texttt{--final --evaluate-test}), which was made once, after the chosen settings had been committed to \texttt{configs/landmark.yaml}. The family with the highest validation macro-F1 in the final run is treated as the landmark model, and its prediction files are copied to \texttt{reports/predictions/landmark\_val.npz} and \texttt{landmark\_test.npz}. The files of the other families are kept next to them. No cross-validation was run.
 
 \subsection{Limitation: Images Without a Detected Hand}
 
-A landmark model can only predict for images in which MediaPipe finds a hand. Images without a detection are not counted as errors; they are missing from the prediction files, so landmark scores describe the detected images only and cannot be read as accuracy on all images. This is why the comparison with the CNN uses the common set of detected test images. In the 20-image check of Section~\ref{sec:feature-results}, a hand was found in 15 of 20 images. We kept the default confidence of 0.5, because a wrong landmark vector is worse than a missing one.
+A landmark model can only predict for images in which MediaPipe finds a hand. Images without a detection are not counted as errors; they are missing from the prediction files, so landmark scores describe the detected images only and cannot be read as accuracy on all images. We kept the default detection confidence of 0.5, because a wrong landmark vector is worse than a missing one.
 
-\todobox{Insert the real detection rates after the extraction run on the shared split: rate for train, validation and test (from \texttt{landmark\_detection\_by\_split.csv}), rate per letter and the weakest letters (from \texttt{landmark\_detections\_split.csv}). State how many images remain in each split. Do not use numbers from a smoke run.}
+The extraction ran once on all 10{,}400 images of the shared split. No image was unreadable and no landmark vector contained a non-finite value. A hand was found in 7{,}660 images (73.7\%), with similar rates in the three splits (Table~\ref{tab:landmark-detection}). The 20-image check of Section~\ref{sec:feature-results} (15 of 20, or 75\%) was close to this overall rate.
+
+\begin{table}[htbp]
+\centering
+\caption{Images with a detected hand in each split of the shared split file.}
+\label{tab:landmark-detection}
+\begin{tabular}{lrrr}
+\toprule
+Split & Images & Hand found & Rate \\
+\midrule
+Train & 7{,}280 & 5{,}475 & 75.2\% \\
+Validation & 1{,}560 & 1{,}095 & 70.2\% \\
+Test & 1{,}560 & 1{,}090 & 69.9\% \\
+\midrule
+All & 10{,}400 & 7{,}660 & 73.7\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The rate differs strongly between letters. Of the 400 images per letter, a hand was found in only 130 images of N (32.5\%), 193 of M (48.2\%), 242 of A (60.5\%), 259 of P (64.8\%), 260 of C (65.0\%) and 262 of Q (65.5\%). The highest rates are F (382 images, 95.5\%), K (348, 87.0\%) and R (337, 84.2\%). The lowest letters include the closed-hand signs A, M and N. In the 20-image check, three of the five missed images showed closed or curled fingers and two showed fingers pointing downwards. We did not inspect the missed images of the full run, so we do not claim a cause for the full set.
+
+Only the detected images are used: 5{,}475 for training, 1{,}095 for validation and 1{,}090 for testing. Because the detection rate depends on the letter, the landmark test set is no longer balanced: the number of test images per letter ranges from 20 (A) to 57 (F), out of 60 in the split.
+
+\subsection{Final Scores}
+
+The final run trained the three families with the committed settings and wrote the validation and test predictions in one command, run once. On validation the SVM had the highest macro-F1 (0.9683), ahead of the MLP (0.9678) and the forest (0.9495), so the SVM is the landmark model (Section~\ref{sec:landmark-hyperparameters}). Table~\ref{tab:landmark-scores} shows its scores, computed with the shared evaluation code on the detected images only.
+
+\begin{table}[htbp]
+\centering
+\caption{Scores of the landmark model (calibrated SVM) on the detected images.}
+\label{tab:landmark-scores}
+\begin{tabular}{lrrrr}
+\toprule
+Split & Images & Accuracy & Macro-F1 & Macro AUC-ROC \\
+\midrule
+Validation & 1{,}095 & 0.9753 & 0.9683 & 0.9940 \\
+Test & 1{,}090 & 0.9688 & 0.9660 & 0.9951 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Per letter, the SVM is weakest on the test split for M (F1 0.857, 22 test images), N (0.889, 24 images) and S (0.916, 55 images), followed by I (0.938) and J (0.947). The letters B, D, K, L and U have an F1 of 1.000. M and N are also among the letters with the lowest detection rates, so their scores rest on few images and are noisy. The confused letter pairs are analysed in the error analysis section.
+
+On the same 1{,}090 test images the CNN reached accuracy 0.9780, macro-F1 0.9789 and macro AUC-ROC 0.9998. The CNN is therefore ahead of the landmark model on these images by 0.0092 in accuracy (about ten images) and by 0.0129 in macro-F1.
+
+These scores are optimistic and are not an estimate of accuracy on new signers. As Section~\ref{sec:limitations} reports, 70.0\% of the test images and 73.4\% of the validation images have a training image of the same class within 8 bits of the difference hash. Near-identical images in training and test make every score in this report higher than it would be on new people. That check covers all test images; we did not repeat it for the 1{,}090 detected images that the landmark model uses.
 
 \subsection{Learning Curves}
 
-\todobox{After the final run, include the MLP loss and accuracy curves from \texttt{reports/figures/} (made by \texttt{python -m signbridge.plot\_landmark\_curves}) and describe them: the epoch where early stopping ended, the gap between training and validation, and whether the curves show overfitting. Use only the real run.}
+Figure~\ref{fig:landmark-mlp-curves} shows the loss and accuracy of the final MLP run, which uses the settings of the best search trial, for every epoch. Training ran for 32 epochs. At epoch 1 the training accuracy was 0.7191 and the validation accuracy 0.8612. The best validation macro-F1 (0.9678, validation accuracy 0.9717) was reached at epoch 22, where the training accuracy was 0.9799. After 10 epochs without improvement training stopped at epoch 32, and the weights of epoch 22 were restored.
+
+\IfFileExists{\figdir landmark_mlp_curves.png}{%
+  \begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\linewidth]{\figdir landmark_mlp_curves.png}
+  \caption{Loss and accuracy per epoch of the final landmark MLP run, for the training and validation splits.}
+  \label{fig:landmark-mlp-curves}
+  \end{figure}
+}{%
+  \todobox{Missing figure \texttt{reports/figures/landmark\_mlp\_curves.png}. Make it with \texttt{python -m signbridge.plot\_landmark\_curves}.}
+}
+
+The validation loss was 0.2245 at epoch 22, lowest at epoch 24, and 0.3106 at epoch 32. Over the same epochs the training loss stayed between 0.055 and 0.064, and the validation macro-F1 fell to 0.9553. This points to mild overfitting after about epoch 22 to 24, which is why the best weights are restored. The gap between training accuracy (0.9799) and validation accuracy (0.9717) at epoch 22 is about 0.8 percentage points. The training loss is averaged over the epoch with dropout active, and the validation loss is computed with dropout off, so the two losses are not directly comparable.
