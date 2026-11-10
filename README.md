@@ -201,6 +201,16 @@ The settings are in `configs/data.yaml`, section `split`, plus the top-level `se
 
 The committed file has 10,400 images, 400 per letter, split 280 / 60 / 60 per letter (7,280 / 1,560 / 1,560 in total). It holds 2,128 groups: 1,192 in train, 459 in validation and 477 in test. Grouping by image hash reduces leakage between the splits but cannot remove it, because the ASL images have no signer labels.
 
+### Check the split for near-duplicate leakage
+
+This command measures how many validation and test images have a training image of the same letter within 4, 6, 8 and 10 bits of the 64-bit difference hash. It writes a text summary and a CSV, and by default it writes them to a scratch folder outside the repository:
+
+```bash
+python -m tools.split_leakage_report --split-file data/processed/split_v1.csv --image-root PATH/TO/images --output-dir PATH/OUTSIDE/THE/REPO
+```
+
+The committed result is `reports/split_leakage.csv`, produced with this command from the full ASL download root. It gives the leakage rate for each split overall and for every letter; the report quotes the overall rates.
+
 ### Check the GPU and estimate the run time
 
 ```bash
@@ -319,11 +329,14 @@ This reads `configs/modules.yaml`, counts non-merge commits per author for every
 
 ### Model weights
 
-The trained checkpoint is not committed because it is a binary file. It is hosted externally:
+The trained models are not committed because they are binary files. They are hosted externally:
 
-**Weights:** [cnn_best.pt on Google Drive](https://drive.google.com/file/d/1bU0j8pdX5LEu9MLdJIy_xPGXsd14twWJ/view?usp=drive_link)
+- **CNN weights:** [cnn_best.pt on Google Drive](https://drive.google.com/file/d/1bU0j8pdX5LEu9MLdJIy_xPGXsd14twWJ/view?usp=drive_link). Download the file and place it at `models/cnn_best.pt`. Load it with `torch.load` and the model definition in `signbridge.models.cnn`, using the settings in `configs/cnn.yaml`.
+- **Landmark models:** LANDMARK_WEIGHTS_LINK_PLACEHOLDER. Download the folder and place its files in `models/landmark/`. The folder holds the calibrated SVM, the random forest and the MLP, with the settings in `configs/landmark.yaml`. The `.pkl` files need scikit-learn 1.9.1, the version pinned in `requirements.txt`; another version may fail to unpickle them.
 
-Download the file, place it at `models/cnn_best.pt`, and use `torch.load` with the same model definition from `signbridge.models.cnn`. Never invent or commit the link.
+Only load model files from these links. Pickle files can run code when they are loaded, so a `.pkl` file from an unknown source is a security risk even if it looks like a model.
+
+Never invent or commit a weights link, and never commit the weight files themselves.
 
 ## Coming in Later Deliverables
 
