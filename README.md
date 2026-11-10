@@ -332,7 +332,7 @@ This reads `configs/modules.yaml`, counts non-merge commits per author for every
 The trained models are not committed because they are binary files. They are hosted externally:
 
 - **CNN weights:** [cnn_best.pt on Google Drive](https://drive.google.com/file/d/1bU0j8pdX5LEu9MLdJIy_xPGXsd14twWJ/view?usp=drive_link). Download the file and place it at `models/cnn_best.pt`. Load it with `torch.load` and the model definition in `signbridge.models.cnn`, using the settings in `configs/cnn.yaml`.
-- **Landmark models:** LANDMARK_WEIGHTS_LINK_PLACEHOLDER. Download the folder and place its files in `models/landmark/`. The folder holds the calibrated SVM, the random forest and the MLP, with the settings in `configs/landmark.yaml`. The `.pkl` files need scikit-learn 1.9.1, the version pinned in `requirements.txt`; another version may fail to unpickle them.
+- **Landmark models:** [landmark model folder on Google Drive](https://drive.google.com/drive/folders/1oYX1xJccORwmWYKD7bbgQYh_no2xROnN?usp=sharing). Download the folder and place its files (`landmark_svm.pkl`, `landmark_forest.pkl`, `landmark_mlp.pt`) in `models/landmark/`. The folder holds the calibrated SVM, the random forest and the MLP, with the settings in `configs/landmark.yaml`. The `.pkl` files need scikit-learn 1.9.1, the version pinned in `requirements.txt`; another version may fail to unpickle them.
 
 Only load model files from these links. Pickle files can run code when they are loaded, so a `.pkl` file from an unknown source is a security risk even if it looks like a model.
 
