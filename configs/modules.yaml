@@ -53,6 +53,10 @@ modules:
       - data_scripts/features/extract.py
       - data_scripts/features/landmarks.py
       - data_scripts/eda/feature_eda.py
+      - data/processed/landmark_detections_split.csv
+      - reports/figures/landmark_detection_by_split.csv
+      - reports/figures/detection_rate_per_class.csv
+      - reports/figures/detection_rate_per_class.png
 
   labels_and_images:
     owner: Fatima
@@ -78,6 +82,13 @@ modules:
     owner: Aliza
     paths:
       - src/signbridge/evaluation/**
+      - reports/metrics/cnn_*
+      - reports/metrics/landmark_*_test_common_*
+      - reports/bias/**
+      - reports/errors/**
+      - reports/figures/cnn_test_*
+      - docs/report/sections/error_analysis.tex
+      - docs/report/sections/bias_check.tex
 
   landmark_models:
     owner: Fatima
@@ -89,7 +100,13 @@ modules:
       - src/signbridge/training/landmark_trials.py
       - configs/landmark.yaml
       - reports/tuning/landmark_trials.csv
+      - reports/tuning/mlp_history.csv
+      - reports/figures/landmark_mlp_curves.png
+      - reports/metrics/landmark_val_*
+      - reports/metrics/landmark_test_*
       - reports/predictions/landmark_*
+      - docs/report/sections/phase3_landmark.tex
+      - docs/report/sections/landmark_hyperparameters.tex
 
   cnn_model:
     owner: Anas

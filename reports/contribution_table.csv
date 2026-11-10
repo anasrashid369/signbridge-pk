@@ -3,26 +3,29 @@ shared_config,Anas,Anas Rashid,6
 shared_config,Anas,Aliza,5
 shared_config,Anas,Fatima Asif,1
 project,Anas,Anas Rashid,13
-readme,Shared,Anas Rashid,8
+readme,Shared,Anas Rashid,10
 readme,Shared,Aliza,3
 protocol,Aliza,Aliza,3
 protocol,Aliza,Anas Rashid,1
 download,Anas,Anas Rashid,1
 cleaning,Aliza,Aliza,3
 raw_eda,Aliza,Aliza,2
-landmarks,Fatima,Fatima Asif,6
+landmarks,Fatima,Fatima Asif,10
 labels_and_images,Fatima,Fatima Asif,3
 manifest,Aliza,Aliza,2
 splits,Aliza,Aliza,5
-evaluation,Aliza,Aliza,5
-landmark_models,Fatima,Fatima Asif,13
-cnn_model,Anas,Anas Rashid,4
+evaluation,Aliza,Aliza,10
+evaluation,Aliza,Anas Rashid,2
+evaluation,Aliza,Fatima Asif,1
+landmark_models,Fatima,Fatima Asif,26
+landmark_models,Fatima,Anas Rashid,2
+cnn_model,Anas,Anas Rashid,5
 cnn_training,Anas,Anas Rashid,6
 cnn_tuning,Anas,Anas Rashid,1
 tools,Anas,Anas Rashid,11
-report,Anas,Anas Rashid,40
-report,Anas,Fatima Asif,9
-report,Anas,Aliza,6
+report,Anas,Anas Rashid,45
+report,Anas,Aliza,8
+report,Anas,Fatima Asif,6
 tests,Shared,Anas Rashid,21
 tests,Shared,Fatima Asif,17
 tests,Shared,Aliza,16
