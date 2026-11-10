@@ -40,7 +40,7 @@ The check is run by \texttt{src/signbridge/evaluation/bias.py} on the CNN predic
 \begin{itemize}
   \item \textbf{Blur and hand detection show no clear difference.} The accuracy of the four blur groups lies between 0.969 and 0.985 and their intervals overlap. Images where no hand was found (30\% of the test split) score 0.983 against 0.978 for images where one was found, which is within the uncertainty.
   \item \textbf{Brightness shows a small pattern.} The two middle brightness groups scored higher (0.995 and 0.987) than the darkest (0.972) and the brightest (0.964) groups. The intervals of the second and fourth group do not overlap, but we did not run a significance test, the intervals are too narrow for the reason given above, and we looked at three properties, so a difference of this size could be chance. We read it as a possible weakness at the brightness extremes that is worth checking with more data, not as a finding.
-  \item \textbf{The differences are small in size.} The lowest accuracy in any group is 0.964, only about 3 points below the overall 0.9795, and each group holds only 390 images.
+  \item \textbf{The differences are small in size.} The lowest accuracy in any group is 0.964, only about 1.5 points below the overall accuracy of 0.9795, and the brightness and blur groups hold 390 images each (the hand groups 1{,}090 and 470), so the group scores rest on few images.
 \end{itemize}
 
 \subsection{Limits}
