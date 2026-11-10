@@ -3,7 +3,7 @@
 
 \subsection{Search Space}
 
-The tuning grid is stored in \texttt{configs/landmark.yaml} and read by \texttt{python -m signbridge.tune\_landmark}. The SVM and the random forest use their full grids: $4\times4=16$ SVM trials and $3\times3=9$ forest trials. The MLP grid has five hyperparameters with three values each, $3^5=243$ combinations, which is too many to train. A seeded random sample of 20 combinations is run instead (Table~\ref{tab:landmark-search-space}). At most $16+9+20=45$ trials are therefore run. Each trial appends one row to \texttt{reports/tuning/landmark\_trials.csv}, which has its own columns for the SVM, forest and MLP parameters. A trial that is already in the file is skipped, so an interrupted search can be resumed. Every trial is trained on the training split and scored on the validation split. The test split is never read during tuning.
+The tuning grid is stored in \texttt{configs/landmark.yaml} and read by \texttt{python -m signbridge.tune\_landmark}. The SVM and the random forest use their full grids: $4\times4=16$ SVM trials and $3\times3=9$ forest trials. The MLP grid has five hyperparameters with three values each, $3^5=243$ combinations, which is too many to train. A seeded random sample of 20 combinations (8.2\%) was run instead (Table~\ref{tab:landmark-search-space}), so 45 trials were run in total. Each trial was run once with seed 42 and appended one row to \texttt{reports/tuning/landmark\_trials.csv}, which has its own columns for the SVM, forest and MLP parameters. A trial that is already in the file is skipped, so an interrupted search can be resumed. The first SVM trial was run alone to time it, and the full search reused its row. Every trial is trained on the training split and scored on the validation split. The file has no test column, and the test split is never read during tuning.
 
 \begin{table}[htbp]
 \centering
@@ -28,25 +28,107 @@ Trials & SVM / forest / MLP & 16 / 9 / 20 (seeded sample of 243) \\
 \end{tabular}
 \end{table}
 
-The remaining settings are fixed during tuning: two hidden layers, at most 100 epochs, early-stopping patience 10, AdamW, 63 inputs, 26 classes and seed 42. Every SVM trial fits the \texttt{SVC} about six times because of the calibration (Section~\ref{sec:landmark-models}), so the SVM grid is the most expensive part of the search.
-
-\todobox{If the SVM grid was reduced to fit the time budget, replace the SVM rows and the trial count above with what was actually run, and state the measured time of one SVM trial. Otherwise delete this note.}
+The remaining settings are fixed during tuning: two hidden layers, at most 100 epochs, early-stopping patience 10, AdamW, 63 inputs, 26 classes and seed 42. The search was fast: the per-trial times add up to 361 s, about 6 minutes. An SVM trial took 1.8 to 12.4 s, a forest trial 0.5 to 2.8 s and an MLP trial 4.6 to 22.6 s, so the MLP trials took most of the time (255 s). No grid had to be reduced.
 
 \subsection{Selection Rule}
 
-Within each model family, the trial with the highest validation macro-F1 wins. Macro-F1 is used because it weights all 26 letters equally and shows letters that fail, even though the classes are balanced. The winning settings of the three families are written to \texttt{configs/landmark.yaml} in one commit that names the winning trials, before the final training run. The family with the highest validation macro-F1 is then treated as the landmark model. If two trials of a family have exactly the same validation macro-F1, the one recorded first in the trials file is kept; there is no further tie-break.
+Within each model family, the trial with the highest validation macro-F1 wins. Macro-F1 is used because it weights all 26 letters equally and shows letters that fail, even though the classes are balanced in the split. If two trials of a family have exactly the same validation macro-F1, the one recorded first in the trials file is kept; there is no further tie-break. The winning settings of the three families were written to \texttt{configs/landmark.yaml} in one commit that names the winning trials, before the final training run. The three winners are then retrained in the final run, and the family with the highest validation macro-F1 in that run is treated as the landmark model.
 
 \subsection{Trial Results}
 
-\IfFileExists{../../reports/tuning/landmark_trials_table.tex}{%
-  \begin{table}[htbp]
-  \centering
-  \caption{Tuning trials for the landmark models, as recorded. The table is generated from \texttt{reports/tuning/landmark\_trials.csv}.}
-  \label{tab:landmark-trials}
-  \resizebox{\linewidth}{!}{\input{../../reports/tuning/landmark_trials_table.tex}}
-  \end{table}
-}{%
-  \todobox{The landmark trial table is missing. Generate it from \texttt{reports/tuning/landmark\_trials.csv} after the real tuning run on the shared split.}
-}
+Tables~\ref{tab:landmark-svm-trials}, \ref{tab:landmark-forest-trials} and \ref{tab:landmark-mlp-trials} list every trial, with the numbers copied from \texttt{reports/tuning/landmark\_trials.csv}.
 
-\todobox{Winners and justification. After the real tuning run, read \texttt{reports/tuning/landmark\_trials.csv} and report for each family: the winning parameters, its validation accuracy and macro-F1, and the range of validation macro-F1 over all trials of that family. Say which family won overall. Justify each choice with the data, for example whether the best $C$ lies at the edge of the grid (which would suggest a larger grid) and whether the differences between the top trials are larger than the seed-to-seed noise. Write this text only when the file exists, and do not copy numbers from a smoke run.}
+\begin{table}[htbp]
+\centering
+\caption{Validation macro-F1 of the 16 SVM trials (rows: $C$, columns: $\gamma$). The winner, svm-14, is marked with an asterisk.}
+\label{tab:landmark-svm-trials}
+\begin{tabular}{lrrrr}
+\toprule
+$C$ & $\gamma$ = scale & $\gamma$ = 0.01 & $\gamma$ = 0.1 & $\gamma$ = 1 \\
+\midrule
+0.1 & 0.8161 & 0.7819 & 0.8650 & 0.5822 \\
+1 & 0.9475 & 0.9340 & 0.9439 & 0.8278 \\
+10 & 0.9669 & 0.9650 & 0.9486 & 0.8285 \\
+100 & 0.9648 & 0.9683$^{*}$ & 0.9478 & 0.8285 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Validation macro-F1 of the 9 forest trials (rows: number of trees, columns: maximum depth). The winner, forest-06, is marked with an asterisk.}
+\label{tab:landmark-forest-trials}
+\begin{tabular}{lrrr}
+\toprule
+Trees & Depth none & Depth 10 & Depth 20 \\
+\midrule
+100 & 0.9419 & 0.9324 & 0.9411 \\
+300 & 0.9487 & 0.9290 & 0.9495$^{*}$ \\
+500 & 0.9479 & 0.9314 & 0.9488 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{The 20 MLP trials. LR is the learning rate and WD the weight decay. The winner, mlp-16, is marked with an asterisk.}
+\label{tab:landmark-mlp-trials}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Trial & LR & Batch & Dropout & Width & WD & Macro-F1 & Accuracy \\
+\midrule
+mlp-01 & 0.0003 & 32 & 0.5 & 64 & 0.0001 & 0.9283 & 0.9379 \\
+mlp-02 & 0.0003 & 32 & 0.5 & 128 & 0 & 0.9556 & 0.9607 \\
+mlp-03 & 0.0003 & 64 & 0.1 & 128 & 0 & 0.9674 & 0.9708 \\
+mlp-04 & 0.0003 & 64 & 0.5 & 64 & 0.0001 & 0.9350 & 0.9452 \\
+mlp-05 & 0.001 & 32 & 0.3 & 256 & 0.001 & 0.9644 & 0.9689 \\
+mlp-06 & 0.001 & 32 & 0.5 & 64 & 0 & 0.9481 & 0.9562 \\
+mlp-07 & 0.001 & 64 & 0.1 & 64 & 0.0001 & 0.9598 & 0.9635 \\
+mlp-08 & 0.001 & 64 & 0.3 & 256 & 0 & 0.9651 & 0.9689 \\
+mlp-09 & 0.001 & 128 & 0.3 & 128 & 0 & 0.9701 & 0.9735 \\
+mlp-10 & 0.001 & 128 & 0.5 & 256 & 0.001 & 0.9610 & 0.9671 \\
+mlp-11 & 0.003 & 32 & 0.1 & 256 & 0.001 & 0.9695 & 0.9735 \\
+mlp-12 & 0.003 & 32 & 0.3 & 64 & 0.001 & 0.9622 & 0.9689 \\
+mlp-13 & 0.003 & 32 & 0.3 & 128 & 0 & 0.9609 & 0.9680 \\
+mlp-14 & 0.003 & 32 & 0.5 & 64 & 0 & 0.9411 & 0.9525 \\
+mlp-15 & 0.003 & 32 & 0.5 & 256 & 0.0001 & 0.9548 & 0.9635 \\
+mlp-16$^{*}$ & 0.003 & 64 & 0.1 & 256 & 0.0001 & 0.9716 & 0.9753 \\
+mlp-17 & 0.003 & 64 & 0.3 & 128 & 0.001 & 0.9651 & 0.9699 \\
+mlp-18 & 0.003 & 128 & 0.3 & 128 & 0.0001 & 0.9661 & 0.9717 \\
+mlp-19 & 0.003 & 128 & 0.5 & 64 & 0 & 0.9358 & 0.9470 \\
+mlp-20 & 0.003 & 128 & 0.5 & 128 & 0.001 & 0.9615 & 0.9680 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Winners and Justification}
+
+Table~\ref{tab:landmark-winners} shows the winner of each family and its score in the final run, in which the winners were retrained once with the same settings.
+
+\begin{table}[htbp]
+\centering
+\caption{Winning trial per family. Search scores are validation scores from the trials file; the last column is the validation macro-F1 of the retrained model in the final run.}
+\label{tab:landmark-winners}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lp{6.3cm}rrr}
+\toprule
+Family & Winning trial and settings & Search macro-F1 & Search accuracy & Final-run macro-F1 \\
+\midrule
+SVM & svm-14: $C=100$, $\gamma=0.01$ & 0.9683 & 0.9753 & 0.9683 \\
+Random forest & forest-06: 300 trees, maximum depth 20 & 0.9495 & 0.9543 & 0.9495 \\
+MLP & mlp-16: learning rate 0.003, batch size 64, dropout 0.1, hidden width 256, weight decay 0.0001 & 0.9716 & 0.9753 & 0.9678 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\textbf{SVM.} The macro-F1 over the 16 trials ranges from 0.5822 to 0.9683. For every $C$, $\gamma=1$ gave the lowest score of its row (0.5822 to 0.8285), and with $C=0.1$ no $\gamma$ reached 0.87. The best values of $\gamma$ are 0.01 and ``scale'', which is about $1/63\approx0.016$ for standardised inputs, and $\gamma=0.1$ is lower again (0.9478 to 0.9486 for $C\geq10$). The winner has the largest $C$ of the grid, so larger values were not tested. The last step in $C$ (10 to 100) changed the macro-F1 by $+0.0033$ at $\gamma=0.01$ and by $-0.0021$ at $\gamma=$ scale, so a larger $C$ is unlikely to change the picture much, but we did not test it. The two next-best trials, svm-09 (0.9669) and svm-10 (0.9650), are within 0.0033; the validation accuracy of svm-14 is 0.9753 and that of svm-09 is 0.9726, a difference of about three images out of 1{,}095.
+
+\textbf{Random forest.} The macro-F1 ranges from 0.9290 to 0.9495. A maximum depth of 10 was the worst depth for every number of trees (0.9290 to 0.9324) and cost 0.009 to 0.021 macro-F1 compared with depth 20. Depth 20 and no depth limit are close (within 0.0008 at every number of trees). More trees helped from 100 to 300 (0.9411 to 0.9495 at depth 20) but not from 300 to 500 (0.9488). The forest is the weakest family: its best trial is 0.0188 below the best SVM trial and 0.0221 below the best MLP trial.
+
+\textbf{MLP.} The macro-F1 ranges from 0.9283 to 0.9716. The best trial has the lowest dropout (0.1), the largest width (256) and the highest learning rate (0.003) of the grid. Very different settings score almost the same: mlp-09 (learning rate 0.001, batch size 128, dropout 0.3, width 128) reaches 0.9701 and mlp-11 reaches 0.9695. The five lowest trials (0.9283 to 0.9481) are exactly the five that combine dropout 0.5 with width 64. Only 20 of 243 combinations were tried, so mlp-16 is the best of a random sample and not of the grid, and several of its values lie at the edge of the grid.
+
+\textbf{Which family is the landmark model.} In the search the best MLP (0.9716) was ahead of the best SVM (0.9683) by 0.0033. In the final run the retrained SVM and forest reproduce their search scores exactly (0.9683 and 0.9495), but the retrained MLP scored 0.9678, which is 0.0038 below its search score and 0.0005 below the SVM. By the selection rule the SVM is therefore the landmark model; the search scores alone would have chosen the MLP. We did not find the cause of the MLP difference and did not run other seeds. The initial weights are created before the training function sets its seed, so they may depend on earlier work in the same process, but we did not test whether this explains it. Because the same MLP settings changed by 0.0038 between two runs, and one validation image is 0.09 percentage points of accuracy, we do not claim that the SVM is better than the MLP: the two are tied within the variation we measured. The forest is clearly behind both.
+
+\textbf{Limits of the search.} Each trial used one seed, the MLP search covers 8.2\% of its grid, and the winners of the SVM and MLP have values at the edge of their grids. The search selects settings on 1{,}095 validation images from the detected images only, so small differences between the top trials should not be read as a ranking.
