@@ -43,9 +43,10 @@ signbridge-pk/
 ├── models/                          # hand landmarker model and later checkpoints (not in Git)
 ├── app/                             # app (Deliverable 3)
 ├── notebooks/                       # exploration only
-├── requirements.txt                 # runtime dependencies for Deliverable 1
-├── requirements-dev.txt             # runtime plus pytest and ruff
-├── requirements-ml.txt              # CNN dependencies, including CPU PyTorch
+├── requirements-core.txt            # shared runtime pins (no torch, no gradio)
+├── requirements.txt                 # core plus CPU PyTorch and Gradio (app)
+├── requirements-dev.txt             # core plus pytest and ruff (CI)
+├── requirements-ml.txt              # core plus CPU PyTorch (training only)
 └── pyproject.toml                   # project metadata and tool settings
 ```
 
@@ -59,6 +60,8 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
 pip install -e .
 ```
+
+For the web app, use `pip install -r requirements.txt` instead of `requirements-dev.txt`; it adds CPU PyTorch and Gradio. `pip install -e .` installs the package itself and reads only the shared core pins.
 
 Download the MediaPipe hand landmarker model once (about 7.8 MB, not in Git):
 
@@ -285,20 +288,20 @@ python -m tools.pack_subset --split-file data/processed/split_v1.csv --image-roo
 
 ### Colab or Kaggle recipe
 
-Run these commands from a fresh runtime. No notebook is needed. Colab and Kaggle already ship a CUDA build of PyTorch and torchvision, so **do not run `pip install -r requirements-ml.txt` there**: that file pins the `+cpu` wheels and would replace the preinstalled CUDA build. Install only the repository runtime and the package itself:
+Run these commands from a fresh runtime. No notebook is needed. Colab and Kaggle already ship a CUDA build of PyTorch and torchvision, so **do not run `pip install -r requirements-ml.txt` or `pip install -r requirements.txt` there**: both pin the `+cpu` wheels and would replace the preinstalled CUDA build. Install only the shared runtime pins and the package itself:
 
 ```bash
 git clone REPOSITORY_URL signbridge-pk
 cd signbridge-pk
-pip install -r requirements.txt
+pip install -r requirements-core.txt
 pip install -e .
 ```
 
 Dry-run notes from a Colab T4 session:
 
-- Colab ran Python 3.13 and the pins in `requirements.txt` installed cleanly there; Kaggle accepts the same pins.
+- Colab ran Python 3.13 and the pins in `requirements-core.txt` installed cleanly there; Kaggle accepts the same pins.
 - After the two `pip install` commands, restart the runtime once (`Runtime > Restart session`), then run `%cd /content/signbridge-pk` again before the next command.
-- `requirements-ml.txt` is never installed on Colab or Kaggle.
+- `requirements-ml.txt` and `requirements.txt` are never installed on Colab or Kaggle.
 
 Confirm that CUDA is visible before spending time on training:
 

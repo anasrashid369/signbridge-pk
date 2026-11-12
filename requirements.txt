@@ -1,10 +1,9 @@
-# CNN training and tuning need requirements-ml.txt (CPU PyTorch).
-numpy==2.4.6
-pandas==3.0.6
-pillow==13.0.0
-pyyaml==6.0.3
-matplotlib==3.11.2
-scikit-learn==1.9.1
-mediapipe==1.1.1
-opencv-contrib-python==5.0.0.93
-kaggle==2.2.4
+# Runtime for the web app, the data scripts and the CNN (Deliverable 3).
+# Install everything for a local run with: pip install -r requirements.txt
+# CPU builds of PyTorch live on the PyTorch index, not on PyPI.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+-r requirements-core.txt
+torch==2.15.0+cpu
+torchvision==0.29.2+cpu
+gradio==6.31.0

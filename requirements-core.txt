@@ -1,0 +1,13 @@
+# Shared runtime pins for the data scripts, the models and the tests.
+# requirements.txt adds CPU PyTorch and Gradio; requirements-ml.txt adds only
+# CPU PyTorch; requirements-dev.txt adds pytest and ruff. Keep the pins here.
+# pillow 12.3.0: Gradio 6.31 needs pillow<13; 12.3.0 is the newest 12.x.
+numpy==2.4.6
+pandas==3.0.6
+pillow==12.3.0
+pyyaml==6.0.3
+matplotlib==3.11.2
+scikit-learn==1.9.1
+mediapipe==1.1.1
+opencv-contrib-python==5.0.0.93
+kaggle==2.2.4
