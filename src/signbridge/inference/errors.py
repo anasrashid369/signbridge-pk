@@ -11,3 +11,7 @@ class InvalidImage(Exception):
 
 class ModelNotFound(Exception):
     """The model weights file is missing."""
+
+
+class PredictorUnavailable(Exception):
+    """A requested predictor is not installed in this checkout."""

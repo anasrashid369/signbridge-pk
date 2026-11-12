@@ -1,0 +1,28 @@
+# Settings for the Gradio app and the predict CLI (Deliverable 3, Anas).
+# Paths are relative to the repository root. Change keys here, not in code.
+
+paths:
+  cnn_checkpoint: models/cnn_best.pt          # MobileNetV2 weights (not in Git; see README "Model weights")
+  label_map: data/processed/label_map.json    # class name to index, 26 letters A-Z (committed)
+  landmark_model_dir: models/landmark         # landmark_svm.pkl, landmark_forest.pkl, landmark_mlp.pt (not in Git)
+  hand_model: models/hand_landmarker.task     # MediaPipe hand landmarker file (not in Git)
+
+model:
+  default: cnn            # predictor selected on start: cnn, landmark or both
+  image_size: 224         # CNN input side in pixels; must match the checkpoint
+  dropout: 0.2            # must match the dropout used when the checkpoint was trained
+  top_k: 3                # predictions shown in the table
+
+limits:
+  max_file_mb: 20         # uploads larger than this are rejected, not shrunk
+  max_side: 4000          # images wider or taller than this are rejected, not shrunk
+
+server:
+  host: 127.0.0.1         # local machine only; 0.0.0.0 would expose it on the local network
+  port: 7860              # Gradio's default port
+  share: false            # keep false: hosting is out of scope, so no public link is created
+
+messages:
+  asl_only: "The models are trained on ASL fingerspelling. No PSL data was used, so PSL accuracy is not measured."
+  optimistic_scores: "Scores are optimistic: 70.0% of test images have a same-class training image within 8 bits."
+  hand_needed: "The landmark model answers only when a hand is detected (69.9% of test images)."
