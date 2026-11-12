@@ -14,52 +14,62 @@ MAX_SIDE = 4000  # pixels; larger images are rejected instead of silently shrunk
 _ALLOWED_MODES = frozenset({"RGB", "RGBA", "L", "P"})
 
 
-def load_rgb_array(source: Image.Image | str | Path | np.ndarray) -> np.ndarray:
+def load_rgb_array(
+    source: Image.Image | str | Path | np.ndarray,
+    max_bytes: int | None = None,
+    max_side: int | None = None,
+) -> np.ndarray:
     """Return ``source`` as a uint8 RGB array of shape (height, width, 3).
 
     Args:
         source: A PIL image, a path to an image file, or an RGB uint8 array.
             Gradio's webcam gives an RGB array; OpenCV gives BGR, so convert
             OpenCV frames before calling this helper.
+        max_bytes: Largest allowed file size in bytes. Defaults to
+            ``MAX_FILE_BYTES``; the app passes its configured limit.
+        max_side: Largest allowed width or height in pixels. Defaults to
+            ``MAX_SIDE``.
 
     Returns:
         A contiguous uint8 array with three channels.
 
     Raises:
         InvalidImage: If the file is missing or unreadable, larger than
-            ``MAX_FILE_BYTES``, has a side longer than ``MAX_SIDE``, has a
-            mode that cannot be converted to RGB, or is not a uint8 RGB array.
+            ``max_bytes``, has a side longer than ``max_side``, has a mode
+            that cannot be converted to RGB, or is not a uint8 RGB array.
     """
+    max_bytes = MAX_FILE_BYTES if max_bytes is None else max_bytes
+    max_side = MAX_SIDE if max_side is None else max_side
     if isinstance(source, np.ndarray):
-        return _check_array(source)
+        return _check_array(source, max_side)
     if isinstance(source, Image.Image):
-        return _from_pil(source)
+        return _from_pil(source, max_side)
     path = Path(source)
     try:
         size = path.stat().st_size
     except OSError as error:
         raise InvalidImage(f"Could not read the image file: {path}") from error
-    if size > MAX_FILE_BYTES:
+    if size > max_bytes:
         raise InvalidImage(
             f"Image is {size / (1024 * 1024):.1f} MB; the limit is "
-            f"{MAX_FILE_BYTES / (1024 * 1024):.0f} MB."
+            f"{max_bytes / (1024 * 1024):.0f} MB."
         )
     try:
         with Image.open(path) as image:
             image.load()
-            return _from_pil(image)
+            return _from_pil(image, max_side)
     except (UnidentifiedImageError, OSError, ValueError) as error:
         raise InvalidImage(f"Could not read the image file: {path}") from error
 
 
-def _from_pil(image: Image.Image) -> np.ndarray:
+def _from_pil(image: Image.Image, max_side: int) -> np.ndarray:
     """Validate a PIL image, apply EXIF orientation and convert it to RGB."""
     width, height = image.size
     if width < 1 or height < 1:
         raise InvalidImage("The image is empty.")
-    if width > MAX_SIDE or height > MAX_SIDE:
+    if width > max_side or height > max_side:
         raise InvalidImage(
-            f"Image is {width}x{height} px; each side must be at most {MAX_SIDE} px."
+            f"Image is {width}x{height} px; each side must be at most {max_side} px."
         )
     if image.mode not in _ALLOWED_MODES:
         raise InvalidImage(f"Unsupported image mode {image.mode!r}; use an RGB image.")
@@ -75,7 +85,7 @@ def _from_pil(image: Image.Image) -> np.ndarray:
     return np.asarray(image, dtype=np.uint8)
 
 
-def _check_array(image: np.ndarray) -> np.ndarray:
+def _check_array(image: np.ndarray, max_side: int) -> np.ndarray:
     """Validate an array from Gradio or OpenCV and return it as uint8 RGB."""
     if image.dtype != np.uint8:
         raise InvalidImage(f"Image array must be uint8, got {image.dtype}.")
@@ -84,8 +94,8 @@ def _check_array(image: np.ndarray) -> np.ndarray:
     height, width = image.shape[:2]
     if height < 1 or width < 1:
         raise InvalidImage("The image is empty.")
-    if height > MAX_SIDE or width > MAX_SIDE:
+    if height > max_side or width > max_side:
         raise InvalidImage(
-            f"Image is {width}x{height} px; each side must be at most {MAX_SIDE} px."
+            f"Image is {width}x{height} px; each side must be at most {max_side} px."
         )
     return np.ascontiguousarray(image)
