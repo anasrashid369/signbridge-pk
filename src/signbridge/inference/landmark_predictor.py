@@ -117,64 +117,69 @@ class LandmarkPredictor:
         self._lock = threading.Lock()  # one MediaPipe call at a time
         self._landmarker = create_landmarker(self.hand_model)
 
-    def detect_landmarks(self, image: np.ndarray) -> np.ndarray | None:
-        """Return the raw landmarks of the hand in an RGB image, or None.
 
-        Args:
-            image: uint8 RGB array of shape (height, width, 3).
+    def detect_landmarks(self, image):
+        if isinstance(image, (str, Path)):
+            mp_image = mp.Image.create_from_file(str(image))
+        else:
+            array = load_rgb_array(image)
+            mp_image = mp.Image(
+                image_format=mp.ImageFormat.SRGB,
+                data=array,
+            )
 
-        Returns:
-            Array of shape (21, 3) with x and y as fractions of the image
-            width and height, or None if no usable hand was found.
+        result = self._landmarker.detect(mp_image)
 
-        Raises:
-            InvalidImage: If ``image`` is not a uint8 RGB array within limits.
-        """
-        array = load_rgb_array(image)
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=array)
-        with self._lock:
-            result = self._landmarker.detect(mp_image)
         if not result.hand_landmarks:
             return None
-        raw = np.array(
-            [[point.x, point.y, point.z] for point in result.hand_landmarks[0]],
+
+        return np.array(
+            [
+                [landmark.x, landmark.y, landmark.z]
+                for landmark in result.hand_landmarks[0]
+            ],
             dtype=np.float64,
         )
-        return raw if np.all(np.isfinite(raw)) else None
 
     def predict(self, image: np.ndarray, top_k: int = 3) -> list[Prediction]:
-        """Return the ``top_k`` most likely letters for one RGB image.
-
-        Args:
-            image: uint8 RGB array of shape (height, width, 3).
-            top_k: Number of predictions to return, between 1 and 26.
-
-        Returns:
-            Predictions sorted from highest to lowest probability. The
-            probabilities cover all 26 classes and sum to 1 before truncation.
-
-        Raises:
-            InvalidImage: If ``image`` is not a uint8 RGB array within limits.
-            NoHandDetected: If MediaPipe finds no usable hand.
-            ValueError: If ``top_k`` is outside 1..26.
-        """
+        """Return the top_k most likely letters for one RGB image."""
         if not 1 <= top_k <= len(self.labels):
-            raise ValueError(f"top_k must be between 1 and {len(self.labels)}, got {top_k}")
+            raise ValueError(
+                f"top_k must be between 1 and {len(self.labels)}, got {top_k}"
+            )
+
         raw = self.detect_landmarks(image)
+
         if raw is None:
             raise NoHandDetected("No hand was found in the image.")
+
+        # Reject invalid landmark coordinates before they reach the SVM.
+        if not np.isfinite(raw).all():
+            raise NoHandDetected(
+                "Detected hand landmarks contain non-finite values."
+            )
+
         try:
             features = normalize_landmarks(raw)
         except ValueError as error:
-            raise NoHandDetected("The detected hand has no usable size.") from error
-        # Training cached the features as float32, so the SVM sees float32 here too.
+            raise NoHandDetected(
+                "The detected hand has no usable size."
+            ) from error
+
+        # Training cached the features as float32.
         row = features.astype(np.float32).reshape(1, -1)
         probabilities = self._model.predict_proba(row)[0]
+
         order = np.argsort(-probabilities, kind="stable")[:top_k]
+
         return [
-            Prediction(label=self.labels[index], probability=float(probabilities[index]))
+            Prediction(
+                label=self.labels[index],
+                probability=float(probabilities[index]),
+            )
             for index in order
         ]
+
 
     def close(self) -> None:
         """Release the MediaPipe landmarker."""
