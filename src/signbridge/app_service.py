@@ -32,6 +32,7 @@ class PredictionResult:
     Attributes:
         status: Markdown line with the top letter or a readable error.
         rows: One ``[rank, letter, probability]`` row per prediction.
+            ``predict_both`` adds a leading model name to each row.
         overlay: RGB image with the hand skeleton, or None when unavailable.
     """
 
@@ -80,8 +81,16 @@ def predict_image(
     try:
         predictor = get_predictor(model_name, settings)
         predictions = predictor.predict(array, top_k=int(top_k))
-    except (ModelNotFound, NoHandDetected, PredictorUnavailable, ValueError) as error:
+    except NoHandDetected:
+        return PredictionResult(
+            "**No hand detected:** the landmark model needs a visible hand. "
+            "Switch to the CNN, which does not need one.",
+            [],
+        )
+    except (ModelNotFound, PredictorUnavailable) as error:
         return PredictionResult(f"**{model_name} is not available:** {error}", [])
+    except ValueError as error:
+        return PredictionResult(f"**Could not predict:** {error}", [])
 
     top = predictions[0]
     status = f"**{model_name}** predicts **{top.label}** ({top.probability:.1%})"
@@ -93,16 +102,36 @@ def predict_image(
     return PredictionResult(status, rows, overlay)
 
 
+def predict_both(
+    image: np.ndarray | None,
+    top_k: float,
+    settings: AppSettings,
+) -> PredictionResult:
+    """Run both predictors and keep both answers in one result.
+
+    The status holds one line per model, so a missing hand on the landmark side
+    does not hide the CNN answer. Each row starts with the model name, which is
+    why the table has four columns instead of three.
+    """
+    if image is None:
+        return PredictionResult("Upload an image or take a webcam photo first.", [])
+    cnn = predict_image(image, "cnn", top_k, settings)
+    landmark = predict_image(image, "landmark", top_k, settings)
+    rows = [["cnn", *row] for row in cnn.rows]
+    rows += [["landmark", *row] for row in landmark.rows]
+    return PredictionResult(f"{cnn.status}\n\n{landmark.status}", rows, landmark.overlay)
+
+
 def _overlay(predictor: Predictor, image: np.ndarray) -> np.ndarray | None:
     """Draw the hand skeleton when the landmark module offers it."""
-    landmarks = getattr(predictor, "landmarks", None)
-    if landmarks is None:
+    detect = getattr(predictor, "detect_landmarks", None)
+    if detect is None:
         return None
     try:
         from signbridge.inference.overlay import draw_landmarks
     except ImportError:
         return None
-    points = landmarks(image)
+    points = detect(image)
     if points is None:
         return None
     return draw_landmarks(image, points)

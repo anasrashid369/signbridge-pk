@@ -13,9 +13,9 @@ from __future__ import annotations
 import gradio as gr
 
 from signbridge.app_config import AppSettings, load_app_settings
-from signbridge.app_service import PredictionResult, predict_image
+from signbridge.app_service import PredictionResult, predict_both, predict_image
 
-MODELS = ("cnn", "landmark")
+MODELS = ("cnn", "landmark", "both")
 
 
 def honesty_markdown(settings: AppSettings) -> str:
@@ -56,8 +56,8 @@ def build_app(settings: AppSettings | None = None) -> gr.Blocks:
             with gr.Column():
                 status = gr.Markdown("Upload an image, then press **Predict**.")
                 table = gr.Dataframe(
-                    headers=["Rank", "Letter", "Probability"],
-                    datatype=["number", "str", "number"],
+                    headers=["Model", "Rank", "Letter", "Probability"],
+                    datatype=["str", "number", "str", "number"],
                     interactive=False,
                     label="Top predictions",
                 )
@@ -72,7 +72,15 @@ def build_app(settings: AppSettings | None = None) -> gr.Blocks:
         def run(
             uploaded: object, model_name: str, count: float
         ) -> tuple[str, list[list[object]], object]:
-            result: PredictionResult = predict_image(uploaded, model_name, count, settings)
+            if model_name == "both":
+                result: PredictionResult = predict_both(uploaded, count, settings)
+            else:
+                result = predict_image(uploaded, model_name, count, settings)
+                result = PredictionResult(
+                    result.status,
+                    [[model_name, *row] for row in result.rows],
+                    result.overlay,
+                )
             return result.status, result.rows, result.overlay
 
         button.click(fn=run, inputs=[image, model, top_k], outputs=[status, table, overlay])
