@@ -145,7 +145,16 @@ def main(argv: list[str] | None = None) -> int:
     for name in names:
         try:
             predictions = builders[name](settings).predict(image, top_k=top_k)
-        except (InvalidImage, ModelNotFound, NoHandDetected, PredictorUnavailable) as error:
+        except NoHandDetected as error:
+            print(
+                f"{name}: no hand detected: {error} "
+                "The landmark model needs a visible hand; use --model cnn (or both).",
+                file=sys.stderr,
+                flush=True,
+            )
+            status = 1
+            continue
+        except (InvalidImage, ModelNotFound, PredictorUnavailable) as error:
             print(f"{name}: error: {error}", file=sys.stderr, flush=True)
             status = 1
             continue

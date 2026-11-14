@@ -1,0 +1,62 @@
+\section{The Application and the Shared Inference Interface}
+\label{sec:inference-app}
+
+This part turns the two trained models into something a person can use: one shared interface, a CNN predictor, a command-line tool and a local web app. Nothing is hosted. The app runs on the machine of the person using it, as Section~\ref{sec:limitations} requires.
+
+\subsection{One Interface for Two Models}
+
+The CNN reads a whole image, while the landmark model first finds a hand and then classifies 63 features. Their inputs and failure modes differ, so we fixed a small contract before writing either predictor:
+
+\begin{itemize}
+\item \texttt{Prediction(label, probability)} is an immutable dataclass. A prediction is a value, not a row in a table, so the command-line tool and the app format the same object.
+\item \texttt{Predictor} is a \texttt{Protocol} with a \texttt{name} and one method, \texttt{predict(image, top\_k=3)}. The image is a \texttt{uint8} RGB array of shape (height, width, 3). The probabilities are computed over all 26 classes, sum to 1 before the list is truncated, and the returned list is sorted from highest to lowest. This is the same order that the saved prediction files use.
+\item Four errors say what went wrong: \texttt{InvalidImage} for an unusable upload, \texttt{NoHandDetected} when the landmark model finds no hand, \texttt{ModelNotFound} for missing weights, and \texttt{PredictorUnavailable} when a predictor is not installed.
+\item \texttt{load\_rgb\_array} is the only way an image enters the system. It accepts a PIL image, a path or an RGB array, applies the EXIF rotation, composites transparency on white, converts grayscale and palette images, and rejects files above 20 MiB, sides above 4000 pixels, unsupported colour modes and non-\texttt{uint8} arrays. Rejecting an image is better than silently resizing it, because a resize would change what the model sees and hide a bad upload.
+\end{itemize}
+
+A \texttt{Protocol} is used instead of a base class because it checks structure, not inheritance: the CNN and the landmark predictor do not need to share a parent, and the tests can use tiny fakes. The limit constants are exported, and the app passes its configured limits explicitly, so the YAML file stays the single source of the numbers.
+
+\subsection{The CNN Predictor}
+
+\texttt{CNNPredictor} wraps the MobileNetV2 of Section~\ref{sec:cnn}. It loads \texttt{models/cnn\_best.pt} once, copies the weights into a model built with \texttt{pretrained=False} so no download is attempted, moves it to the chosen device and sets it to evaluation mode. Each call applies the deterministic evaluation transform (resize to 224 pixels, normalise with the ImageNet statistics), runs under \texttt{torch.inference\_mode}, applies a softmax over the 26 logits and returns the top $k$.
+
+The checkpoint is read with \texttt{weights\_only=True}. A state dict needs no pickled objects, so a tampered checkpoint cannot execute code. A file without \texttt{model\_state\_dict}, or with a head that does not match the 26 classes of the label map, is rejected with an error instead of producing 26 meaningless columns. Missing weights raise \texttt{ModelNotFound} with the README location of the file.
+
+\subsection{The Command-Line Tool}
+
+The same predictor is available without the interface:
+
+\begin{verbatim}
+python -m signbridge.predict --image PATH [--model cnn|landmark|both] [--top-k N]
+\end{verbatim}
+
+The tool prints a fixed-width table with the rank, the letter and the probability. It exits with code 0 when every requested model answered, and with code 1 when one of them could not: a missing hand, missing weights or a missing module prints one line and, with \texttt{--model both}, the other model still runs. The default model, the number of predictions and the image limits come from \texttt{configs/app.yaml}, so the tool and the app cannot drift apart.
+
+\subsection{The Web App}
+
+The app is a Gradio Blocks interface with an upload box and a webcam source, a model selector (CNN, landmark model or both), a slider for the number of predictions, a probability table with one row per model and a panel for the landmark overlay. The three honesty notes shown under the results are read from the settings file rather than written into the layout, so the wording has one home.
+
+The predictors are created on first use and cached, because loading the CNN takes about a second and MediaPipe is heavier still. Every failure becomes one readable line instead of a traceback: an invalid upload, missing weights, no hand, or a predictor that is not installed. The landmark overlay is drawn only in landmark mode and only when the predictor returns landmarks, so the CNN side works without the overlay module.
+
+The server binds to \texttt{127.0.0.1} on port 7860 by default, refuses to create a public link, and enforces the same 20 MiB and 4000-pixel limits as the command-line tool. Hosting is out of scope, so there is no Space URL and no server deployment.
+
+\subsection{What the Demo Shows and What It Does Not}
+
+Table~\ref{tab:inference-demo} shows one image per letter through both predictors, using the top-1 result. The two models agree on A and B. On Z they differ: the CNN predicts Z, while the landmark model finds no hand in \texttt{Z1.jpg} and says so instead of guessing.
+
+\begin{table}[h]
+\centering
+\caption{One image per letter through both predictors (top-1 result and probability).}
+\label{tab:inference-demo}
+\begin{tabular}{llll}
+\hline
+Image & CNN & Landmark model & Agree? \\
+\hline
+\texttt{A1.jpg} & A (0.811) & A (0.853) & yes \\
+\texttt{B1.jpg} & B (0.953) & B (0.698) & yes \\
+\texttt{Z1.jpg} & Z (0.963) & no hand detected & -- \\
+\hline
+\end{tabular}
+\end{table}
+
+The demo does not change the limits of the models. Both were trained on ASL fingerspelling, so no PSL accuracy is claimed. The scores are optimistic for the reasons in Section~\ref{sec:limitations}: 70.0\% of the test images have a same-class training image within 8 bits. The landmark model answers only when MediaPipe finds a hand, which happened for 69.9\% of the test images, and the array route used by the app can change a few results compared with the file route (Section~\ref{sec:landmark-inference}). Letters signed with movement, J and Z, cannot be captured from a single frame. The app is a demonstration of the trained models, not a claim of field accuracy.

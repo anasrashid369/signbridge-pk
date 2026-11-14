@@ -6,9 +6,90 @@ A recognizer for the static letter signs of Pakistan Sign Language (PSL), built 
 
 People who sign in PSL and people who do not know it often have no shared language. Fingerspelling, signing a word letter by letter, is used for names and words without an established sign. This project recognizes individual static letter signs from a single image of one hand. Motion-based signs, words and sentences are out of scope.
 
-## Status
+## What this is, and what it is not
 
-Deliverable 1 (Problem Definition and Data Acquisition) is complete for the ASL baseline: download, cleaning, raw-data charts, landmark extraction and feature charts all run on it. PSL photo collection has not started yet (0 volunteers, 0 photos); it continues in Deliverable 2, where the PSL letter set is also fixed from a cited source. Deliverable 2 adds the MobileNetV2 CNN, the split-driven image dataset, training and tuning commands, and the Contribution Table tooling. The real CNN tuning and final run are complete on the shared split: 12 tuning trials of 3 epochs, and a final run that stopped after 9 of its 12 configured epochs with a best validation macro-F1 of 0.9686 at epoch 6 and a test macro-F1 of 0.9795, read once after the hyperparameters were frozen. These scores are optimistic because the split still contains near-duplicate images shared with the training set (see the Limitations section of the report), so they are not an estimate of accuracy on new signers. The app arrives in Deliverable 3.
+SignBridge PK recognizes the static letter signs of **American Sign Language (ASL)**. The project is about **Pakistan Sign Language (PSL)**, but no PSL photos have been collected yet, so every number in this repository comes from ASL fingerspelling. No PSL accuracy is measured or claimed. The ASL data is used to build and test the pipeline; the PSL letter set and PSL photos come later. Motion-based signs, words and sentences are out of scope, and the app is a practice aid, not an interpreter.
+
+## Quick start
+
+Requires Python 3.11.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+pip install -e .
+python app/app.py
+```
+
+Open <http://127.0.0.1:7860>. The app needs the model files, which are not in Git; download them once from [Model weights](#model-weights). `requirements.txt` installs the shared pins plus CPU PyTorch and Gradio. For tests and lint only, use `requirements-dev.txt` instead (see [Setup](#setup)).
+
+One image from the command line:
+
+```bash
+python -m signbridge.predict --image PATH/TO/A1.jpg --model both
+```
+
+## How to use the app
+
+1. Upload an image or take a webcam picture.
+2. Choose **cnn**, **landmark** or **both**.
+3. Choose how many predictions to show (default 3) and press **Predict**.
+
+The CNN reads the whole image and works without a visible hand. The landmark model first finds 21 hand points and then classifies their normalized coordinates; when it finds a hand, the app also draws the skeleton over the image. **both** shows the two predictions side by side so they can be compared.
+
+An upload larger than 20 MiB or with a side above 4000 pixels is rejected rather than shrunk, because resizing would change what the model sees and hide a bad file. The same limits apply to the command-line tool, and both read them from `configs/app.yaml`. The server binds to `127.0.0.1` and never creates a public link; hosting is out of scope.
+
+## What the on-screen notice means
+
+Three notes always sit under the results. They are read from `configs/app.yaml` (`messages`), not written into the layout:
+
+- **ASL only.** "The models are trained on ASL fingerspelling. No PSL data was used, so PSL accuracy is not measured."
+- **Optimistic scores.** "Scores are optimistic: 70.0% of test images have a same-class training image within 8 bits."
+- **Hand needed.** "The landmark model answers only when a hand is detected (69.9% of test images)."
+
+If the landmark model finds no hand, the result line says: **"No hand detected: the landmark model needs a visible hand. Switch to the CNN, which does not need one."** That is not an app error; it is the model declining to guess. The command-line tool prints the same reason and suggests `--model cnn` or `--model both`.
+
+## Results, and how to read them
+
+Three images from the local ASL download, top-1 result:
+
+| Image | CNN | Landmark model |
+|---|---|---|
+| `A/A1.jpg` | A (0.811) | A (0.853) |
+| `B/B1.jpg` | B (0.953) | B (0.698) |
+| `Z/Z1.jpg` | Z (0.963) | no hand detected |
+
+The committed scores from the shared split are:
+
+- **CNN:** validation macro-F1 **0.9686**, test macro-F1 **0.9795**, read once after the hyperparameters were frozen.
+- **Landmark SVM:** test macro-F1 **0.9660**, accuracy **0.9688** on the same common test set.
+- **Landmark detection:** MediaPipe found a hand in **69.9%** of the test images.
+
+These numbers are optimistic and are not an estimate of accuracy on new signers: 70.0% of the test images have a same-class training image within 8 bits of the difference hash, and the ASL data has no signer labels. The two models also see the data differently, pixels for the CNN and coordinates for the landmark model, so they disagree on some images. Use the numbers to compare the two approaches, not to promise field accuracy.
+
+## Model weights
+
+The trained models are binary files and are not committed. Download them from these links and place them exactly as shown:
+
+- **CNN weights:** [cnn_best.pt on Google Drive](https://drive.google.com/file/d/1bU0j8pdX5LEu9MLdJIy_xPGXsd14twWJ/view?usp=drive_link) → `models/cnn_best.pt`
+- **Landmark models:** [landmark model folder on Google Drive](https://drive.google.com/drive/folders/1oYX1xJccORwmWYKD7bbgQYh_no2xROnN?usp=sharing) → `models/landmark/landmark_svm.pkl`, `landmark_forest.pkl` and `landmark_mlp.pt`
+- **MediaPipe hand landmarker:** the 7.8 MB `hand_landmarker.task` → `models/hand_landmarker.task`; the download command is in [Setup](#setup).
+
+The `.pkl` files need scikit-learn 1.9.1, the version pinned in `requirements.txt`; another version may fail to unpickle them. Only load model files from these links: a pickle file can run code when it is loaded, so a `.pkl` from an unknown source is a security risk even if it looks like a model.
+
+## Limits
+
+- Static single-hand letters only. J and Z involve movement and cannot be read from one frame.
+- ASL, not PSL. No PSL data, so no PSL accuracy is claimed.
+- The landmark model needs a detected hand (69.9% of test images) and refuses to guess otherwise.
+- Scores are optimistic because the ASL split still contains near-duplicates shared with training.
+- Local use only: no hosting, no server deployment, no public link.
+- One hand per image. A second hand or a cluttered background can change the result.
+
+## What works today
+
+The ASL pipeline runs end to end: download, cleaning, raw-data charts, landmark extraction, feature charts, the shared split, CNN training and tuning, the landmark models, the evaluation module, the command-line tool and the local app. The CNN and the landmark models are trained on the shared split; the committed scores are in [Results](#results-and-how-to-read-them). PSL photo collection has not started (0 volunteers, 0 photos), so the PSL letter set is still open.
 
 ## Repository Layout
 
@@ -24,10 +105,16 @@ signbridge-pk/
 │   ├── data/                        # split-driven dataset and image transforms
 │   ├── models/                      # MobileNetV2 wrapper and landmark models
 │   ├── training/                    # loops, prediction files and trial logging
+│   ├── evaluation/                  # metrics, bias, error analysis, sample predictions
+│   ├── inference/                   # shared Prediction contract, CNN and landmark predictors
+│   ├── app_config.py                # validated settings for the app and the CLI
+│   ├── app_service.py               # one prediction call behind the Gradio layout
+│   ├── predict.py                   # predict one image from the command line
 │   ├── train_cnn.py                 # CNN training command
 │   └── tune_cnn.py                  # CNN hyperparameter search command
 ├── configs/data.yaml                # All paths, thresholds and seeds
 ├── configs/cnn.yaml                 # CNN data, model, training and tuning settings
+├── configs/app.yaml                 # model paths, limits, server and honesty notes
 ├── configs/modules.yaml             # module owners and path globs for the Contribution Table
 ├── tools/                           # subset packer, contribution table, trials to LaTeX
 ├── tests/                           # pytest suite
@@ -40,8 +127,8 @@ signbridge-pk/
 │   └── cleaning_summary_table.tex   # the same counts as a table for the report
 ├── data/                            # raw/ and interim/ are not in Git
 │   └── processed/                   # label_map.json, split_v1.csv and manifest.csv are committed
-├── models/                          # hand landmarker model and later checkpoints (not in Git)
-├── app/                             # app (Deliverable 3)
+├── models/                          # hand landmarker model and checkpoints (not in Git)
+├── app/                             # Gradio app entry point
 ├── notebooks/                       # exploration only
 ├── requirements-core.txt            # shared runtime pins (no torch, no gradio)
 ├── requirements.txt                 # core plus CPU PyTorch and Gradio (app)
@@ -52,7 +139,7 @@ signbridge-pk/
 
 ## Setup
 
-Requires Python 3.11.
+The [Quick start](#quick-start) installs the app. For development, the tests and the data scripts, use the dev file instead:
 
 ```bash
 python -m venv .venv
@@ -61,7 +148,7 @@ pip install -r requirements-dev.txt
 pip install -e .
 ```
 
-For the web app, use `pip install -r requirements.txt` instead of `requirements-dev.txt`; it adds CPU PyTorch and Gradio. `pip install -e .` installs the package itself and reads only the shared core pins.
+`requirements-dev.txt` holds the shared pins plus pytest and ruff; it has no torch and no Gradio. `pip install -e .` installs the package itself and reads only the shared core pins.
 
 Download the MediaPipe hand landmarker model once (about 7.8 MB, not in Git):
 
@@ -78,7 +165,7 @@ ruff check .
 pytest
 ```
 
-Most tests use only the Deliverable 1 dependencies. Every test module that needs PyTorch starts with `pytest.importorskip("torch")`, so `pytest` also passes in CI, where torch is not installed. Install `requirements-ml.txt` and run `pytest` locally to include the CNN tests.
+Most tests use only the shared runtime pins. Every test module that needs PyTorch starts with `pytest.importorskip("torch")`, so `pytest` also passes in CI, where torch is not installed. Install `requirements-ml.txt` and run `pytest` locally to include the CNN tests.
 
 ## Data
 
@@ -157,7 +244,7 @@ Needs PSL photos in `data/raw/psl`, named `{person_id}_{label}_{lighting}_{backg
 python -m data_scripts.build_manifest            # writes data/processed/manifest.csv
 ```
 
-## Deliverable 2: CNN Training
+## CNN training
 
 The image classifier is MobileNetV2 from torchvision with a new dropout and linear head for the 26 ASL letters. All settings live in `configs/cnn.yaml`; paths are relative to the repository root. Training runs on CUDA when PyTorch reports a GPU, otherwise on the CPU.
 
@@ -167,7 +254,7 @@ Install the CNN dependencies once:
 pip install -r requirements-ml.txt
 ```
 
-That file includes the Deliverable 1 runtime and the pinned CPU builds of PyTorch and torchvision, so the command works on its own. Gradio is not part of this install; it returns with the Deliverable 3 app. This command is for a local CPU environment. On Colab or Kaggle, use the recipe below instead, because the `+cpu` pins would replace the preinstalled CUDA build.
+That file includes the shared runtime pins and the pinned CPU builds of PyTorch and torchvision, so the command works on its own. Gradio is not part of this install; use `requirements.txt` for the app. This command is for a local CPU environment. On Colab or Kaggle, use the recipe below instead, because the `+cpu` pins would replace the preinstalled CUDA build.
 
 The committed split contract is `data/processed/split_v1.csv`, with columns `path`, `label`, `group_id` and `split`. The `path` column is relative to the image root, for example `A/A123.jpg`; `split` is one of `train`, `val` and `test`; and class indices come from `data/processed/label_map.json`. The dataset only reads the split it is asked for.
 
@@ -197,7 +284,7 @@ The settings are in `configs/data.yaml`, section `split`, plus the top-level `se
 | Key | Value | Meaning |
 |---|---|---|
 | `images_per_class` | 400 | Images kept per letter after cleaning, drawn at random with the seed |
-| `near_duplicate_distance` | 3 | Two images of a letter whose 64-bit hashes differ in at most this many bits are near-duplicates; only the first is kept. Used by the split pool only; `quality.near_duplicate_distance` is the Deliverable 1 setting |
+| `near_duplicate_distance` | 3 | Two images of a letter whose 64-bit hashes differ in at most this many bits are near-duplicates; only the first is kept. Used by the split pool only; `quality.near_duplicate_distance` is the cleaning setting |
 | `group_method` | leader | `leader`: an image joins the closest earlier group leader, so groups stay small. `chain`: images linked through other images share a group, which merges a whole run of frames into one group |
 | `group_distance` | 10 | Largest hash distance (in bits) at which an image joins a group |
 | `train_fraction`, `val_fraction`, `test_fraction` | 0.70, 0.15, 0.15 | Share of each letter in each split |
@@ -330,21 +417,35 @@ python -m tools.contribution_table
 
 This reads `configs/modules.yaml`, counts non-merge commits per author for every module with `git log --use-mailmap --no-merges` on `main`, and writes `reports/contribution_table.csv` and `reports/contribution_table.tex`. Commits that exist only on unmerged branches are not reachable from `main` and are not counted. Author aliases are grouped through `.mailmap`.
 
-### Model weights
+## Command-line reference
 
-The trained models are not committed because they are binary files. They are hosted externally:
+The [Quick start](#quick-start) shows one command. The full form:
 
-- **CNN weights:** [cnn_best.pt on Google Drive](https://drive.google.com/file/d/1bU0j8pdX5LEu9MLdJIy_xPGXsd14twWJ/view?usp=drive_link). Download the file and place it at `models/cnn_best.pt`. Load it with `torch.load` and the model definition in `signbridge.models.cnn`, using the settings in `configs/cnn.yaml`.
-- **Landmark models:** [landmark model folder on Google Drive](https://drive.google.com/drive/folders/1oYX1xJccORwmWYKD7bbgQYh_no2xROnN?usp=sharing). Download the folder and place its files (`landmark_svm.pkl`, `landmark_forest.pkl`, `landmark_mlp.pt`) in `models/landmark/`. The folder holds the calibrated SVM, the random forest and the MLP, with the settings in `configs/landmark.yaml`. The `.pkl` files need scikit-learn 1.9.1, the version pinned in `requirements.txt`; another version may fail to unpickle them.
+```bash
+python -m signbridge.predict --image PATH [--model cnn|landmark|both] [--top-k N] [--config FILE]
+```
 
-Only load model files from these links. Pickle files can run code when they are loaded, so a `.pkl` file from an unknown source is a security risk even if it looks like a model.
+Both models share one interface: `predict(image, top_k=3)` takes a uint8 RGB array of shape (height, width, 3) and returns a list of `Prediction(label, probability)` sorted from highest to lowest. The probabilities are computed over all 26 classes and sum to 1 before the list is truncated. The shared errors are `InvalidImage`, `NoHandDetected`, `ModelNotFound` and `PredictorUnavailable`.
 
-Never invent or commit a weights link, and never commit the weight files themselves.
+```text
+cnn: data\raw\...\A\A1.jpg
+rank  letter  probability
+   1  A            0.8109
+   2  M            0.0756
+   3  G            0.0159
+```
 
-## Coming in Later Deliverables
+- `--model` chooses the predictor; the default comes from `configs/app.yaml`.
+- `--top-k N` changes the number of rows.
+- `--config FILE` uses another settings file.
+
+The exit code is 0 when every requested model answered. A missing hand, missing weights or a missing module prints one line and exits 1; with `--model both` the other model still runs.
+
+Settings live in `configs/app.yaml`: the four model paths, the default model, the number of predictions, the 20 MiB and 4000-pixel limits, the host and port, and the three notes shown under the results. Change keys there, not in code.
+
+## Coming in later work
 
 - PSL photo collection and a PSL letter set confirmed from a cited source and with a PSL user
-- App for webcam capture, top-3 predictions and landmark overlay (Deliverable 3)
 
 ## Team
 
