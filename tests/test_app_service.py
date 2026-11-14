@@ -30,7 +30,7 @@ class FakePredictor:
 class LandmarkFake(FakePredictor):
     """Landmark predictor that also returns the raw points."""
 
-    def landmarks(self, image: np.ndarray) -> np.ndarray:
+    def detect_landmarks(self, image: np.ndarray) -> np.ndarray:
         return np.zeros((21, 3), dtype=np.float32)
 
 
@@ -74,20 +74,31 @@ def test_slider_float_is_cast_to_int(monkeypatch: pytest.MonkeyPatch) -> None:
     assert predictor.calls[0][1] == 1
 
 
-@pytest.mark.parametrize(
-    "error",
-    [ModelNotFound("weights missing"), NoHandDetected("No hand detected.")],
-)
-def test_errors_become_messages(monkeypatch: pytest.MonkeyPatch, error: Exception) -> None:
+def test_unavailable_model_becomes_a_message(monkeypatch: pytest.MonkeyPatch) -> None:
     class Failing(FakePredictor):
         def predict(self, image: np.ndarray, top_k: int = 3) -> list[Prediction]:
-            raise error
+            raise ModelNotFound("weights missing")
 
     monkeypatch.setattr(service, "get_predictor", lambda name, settings: Failing())
     image = np.zeros((8, 8, 3), dtype=np.uint8)
     result = service.predict_image(image, "landmark", 3, load_app_settings())
     assert "is not available" in result.status
-    assert str(error) in result.status
+    assert "weights missing" in result.status
+    assert result.rows == []
+
+
+def test_no_hand_becomes_its_own_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    class NoHand(FakePredictor):
+        def predict(self, image: np.ndarray, top_k: int = 3) -> list[Prediction]:
+            raise NoHandDetected("No hand was found in the image.")
+
+    monkeypatch.setattr(service, "get_predictor", lambda name, settings: NoHand())
+    image = np.zeros((8, 8, 3), dtype=np.uint8)
+    result = service.predict_image(image, "landmark", 3, load_app_settings())
+    assert result.status == (
+        "**No hand detected:** the landmark model needs a visible hand. "
+        "Switch to the CNN, which does not need one."
+    )
     assert result.rows == []
 
 
@@ -127,8 +138,67 @@ def test_landmark_without_overlay_module(monkeypatch: pytest.MonkeyPatch) -> Non
     assert result.overlay is None
 
 
-def test_landmark_without_landmarks_method(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_landmark_without_detection_method(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(service, "get_predictor", lambda name, settings: FakePredictor())
     image = np.zeros((8, 8, 3), dtype=np.uint8)
     result = service.predict_image(image, "landmark", 3, load_app_settings())
+    assert result.overlay is None
+
+
+def test_landmark_without_a_hand_has_no_overlay(monkeypatch: pytest.MonkeyPatch) -> None:
+    class NoHand(LandmarkFake):
+        def detect_landmarks(self, image: np.ndarray) -> None:
+            return None
+
+    monkeypatch.setattr(service, "get_predictor", lambda name, settings: NoHand())
+    image = np.zeros((8, 8, 3), dtype=np.uint8)
+    result = service.predict_image(image, "landmark", 3, load_app_settings())
+    assert result.overlay is None
+
+
+def test_both_models_are_combined(monkeypatch: pytest.MonkeyPatch) -> None:
+    cnn = FakePredictor()
+    landmark = FakePredictor()
+    monkeypatch.setattr(
+        service,
+        "get_predictor",
+        lambda name, settings: cnn if name == "cnn" else landmark,
+    )
+    image = np.zeros((8, 8, 3), dtype=np.uint8)
+    result = service.predict_both(image, 2, load_app_settings())
+    assert "**cnn** predicts **A** (80.0%)" in result.status
+    assert "**landmark** predicts **A** (80.0%)" in result.status
+    assert result.rows == [
+        ["cnn", 1, "A", 0.8],
+        ["cnn", 2, "B", 0.15],
+        ["landmark", 1, "A", 0.8],
+        ["landmark", 2, "B", 0.15],
+    ]
+    assert cnn.calls == [((8, 8, 3), 2)]
+    assert landmark.calls == [((8, 8, 3), 2)]
+
+
+def test_both_keeps_the_cnn_when_the_landmark_finds_no_hand(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class NoHand(FakePredictor):
+        def predict(self, image: np.ndarray, top_k: int = 3) -> list[Prediction]:
+            raise NoHandDetected("No hand was found in the image.")
+
+    monkeypatch.setattr(
+        service,
+        "get_predictor",
+        lambda name, settings: FakePredictor() if name == "cnn" else NoHand(),
+    )
+    image = np.zeros((8, 8, 3), dtype=np.uint8)
+    result = service.predict_both(image, 2, load_app_settings())
+    assert "**cnn** predicts **A**" in result.status
+    assert "No hand detected" in result.status
+    assert result.rows == [["cnn", 1, "A", 0.8], ["cnn", 2, "B", 0.15]]
+
+
+def test_both_without_an_image() -> None:
+    result = service.predict_both(None, 3, load_app_settings())
+    assert "Upload an image" in result.status
+    assert result.rows == []
     assert result.overlay is None

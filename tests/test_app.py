@@ -39,3 +39,8 @@ def test_honesty_markdown_lists_every_message() -> None:
     assert "About these numbers" in text
     for message in settings.messages.values():
         assert message in text
+
+
+def test_model_choices_include_both() -> None:
+    module = load_app_module()
+    assert module.MODELS == ("cnn", "landmark", "both")

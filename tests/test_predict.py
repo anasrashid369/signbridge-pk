@@ -128,7 +128,7 @@ def test_landmark_without_a_hand(monkeypatch: pytest.MonkeyPatch, tmp_path: Path
         lambda settings: FailingPredictor(NoHandDetected("No hand detected.")),
     )
     assert predict_cli.main(["--image", str(image), "--model", "landmark"]) == 1
-    assert "No hand detected" in capsys.readouterr().err
+    assert "no hand detected" in capsys.readouterr().err.lower()
 
 
 def test_missing_cnn_checkpoint(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys) -> None:
