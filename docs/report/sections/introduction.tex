@@ -5,12 +5,7 @@ People who communicate in Pakistan Sign Language (PSL) and people who do not kno
 
 \subsection{What This Report Covers}
 
-The project has three deliverables, and the report is organised by them.
-\begin{itemize}
-  \item \textbf{Deliverable 1} defines the problem, the intended users and the data, and cleans and explores the image data (Sections~\ref{sec:problem} to~\ref{sec:eda}).
-  \item \textbf{Deliverable 2} builds two recognisers, splits the data so that the test set is a fair test, and evaluates them (Sections~\ref{sec:cnn} to~\ref{sec:limitations}).
-  \item \textbf{Deliverable 3} applies the trained models to new images in an application, and adds sample predictions, a small user test and the conclusion.
-\end{itemize}
+The report defines the problem, the intended users and the data, and it cleans and explores the image data (Sections~\ref{sec:problem} to~\ref{sec:eda}). It then builds two recognisers, splits the data so that the test set is a fair test, and evaluates them (Sections~\ref{sec:cnn} to~\ref{sec:limitations}). Finally, the trained models are used in a local web application that takes an uploaded or webcam image and shows the three most likely letters from the CNN or the landmark SVM, with a landmark overlay, a clear message when no hand is found, and a visible note that the models were trained on ASL letters. The report ends with sample predictions, a small user test of the application and conclusions.
 
 \subsection{An Important Limit: ASL, Not PSL}
 
@@ -19,7 +14,7 @@ We have collected no PSL photographs. The only large labelled alphabet dataset a
 \subsection{What We Built}
 
 \begin{itemize}
-  \item \textbf{Two recognisers.} A convolutional network based on MobileNetV2 reads the pixels of the image (Section~\ref{sec:cnn}). A second family first finds 21 hand landmarks with MediaPipe and then classifies them with a support vector machine, a random forest or a small neural network (Section~\ref{sec:landmark-models}). The landmark models answer only when a hand is detected.
+  \item \textbf{Two recognisers.} A convolutional network based on MobileNetV2~\cite{sandler2018mobilenetv2} reads the pixels of the image (Section~\ref{sec:cnn}). A second family first finds 21 hand landmarks with MediaPipe~\cite{zhang2020mediapipe} and then classifies them with a support vector machine~\cite{cortes1995svm}, a random forest or a small neural network (Section~\ref{sec:landmark-models}). The landmark models answer only when a hand is detected.
   \item \textbf{A fair split.} The ASL images are video frames, so a random split would place almost identical frames in training and test. We split by groups of look-alike images (Section~\ref{sec:validation}).
   \item \textbf{Honest evaluation.} We report accuracy, macro-F1, AUC-ROC and the confusion matrix, compare the two families on the same images, analyse the mistakes and check how the CNN behaves by image brightness, blur and hand detection (Sections~\ref{sec:metrics} to~\ref{sec:bias-check}).
 \end{itemize}

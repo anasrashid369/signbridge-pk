@@ -15,6 +15,10 @@ Published PSL work includes automatic recognition of the hand configurations of 
 
 Because no large PSL set was available to us, we trained on the ASL Alphabet dataset on Kaggle~\cite{asl_alphabet_kaggle}, published under the GPL~2 licence. It is the most accessible large alphabet dataset we found, and it is made of frames from short recordings with no signer labels. This is why the split in Section~\ref{sec:validation} groups look-alike images, and why our scores are optimistic.
 
+\subsection{Methods We Use}
+
+We used existing methods and did not change them. MobileNetV2 is a small convolutional network built from inverted residual blocks~\cite{sandler2018mobilenetv2}. We start from weights pretrained on ImageNet~\cite{deng2009imagenet} and fine-tune only the last part of the network. MediaPipe Hands tracks a hand in an image and returns hand landmarks~\cite{zhang2020mediapipe}; our landmark models classify these points. The support vector machine goes back to the support-vector network~\cite{cortes1995svm}, and our SVM and random forest come from scikit-learn~\cite{pedregosa2011sklearn}.
+
 \subsection{What We Add}
 
 Our contribution is not a new method. It is a careful, honest evaluation of two standard recognisers: a split that is aware of near-duplicate frames, a comparison on the same images, an analysis of the mistakes, and a plain statement of what the scores do not show. We make no claim about PSL.
