@@ -27,6 +27,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      - name: Install system libraries for MediaPipe
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libgles2
+
       - name: Lint with ruff
         run: ruff check .
 

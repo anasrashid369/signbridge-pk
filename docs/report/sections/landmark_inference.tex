@@ -1,0 +1,48 @@
+\section{Landmark Inference in the Application}
+\label{sec:landmark-inference}
+
+This section describes how the trained SVM of Section~\ref{sec:landmark-models} is applied to one new image by the application, how closely that reproduces the saved results, and what limits it. The code is in \texttt{src/signbridge/inference/landmark\_predictor.py}. The class \texttt{LandmarkPredictor} follows the same interface as the CNN predictor: \texttt{predict(image, top\_k)} returns the \texttt{top\_k} most likely letters with their probabilities, sorted from highest to lowest.
+
+\subsection{From Image to Letter}
+
+\begin{enumerate}
+\item \textbf{Input check.} The image must be a \texttt{uint8} RGB array of shape (height, width, 3). The shared helper rejects other types, shapes and oversized images with an \texttt{InvalidImage} error.
+\item \textbf{Hand detection.} The MediaPipe hand landmarker (\texttt{models/hand\_landmarker.task}) runs in image mode for one hand with its default thresholds. These are the settings used to extract the training features, so inference sees hands the way training did. It returns 21 landmarks with $x$, $y$ and $z$.
+\item \textbf{Normalisation.} The wrist (landmark 0) is subtracted from every point, and the result is divided by the distance from the wrist to the base of the middle finger (landmark 9). This gives the 63 features of Section~\ref{sec:landmark-models}, which no longer depend on where the hand is in the picture or how large it is. The function is a copy of \texttt{data\_scripts/features/landmarks.py}, because that folder is not part of the installed package; a unit test checks that both give identical output. The features are cast to 32-bit floats, as in the cached training features.
+\item \textbf{Classification.} The saved pipeline standardises the features and applies the SVM ($C=100$, $\gamma=0.01$), whose probabilities come from \texttt{CalibratedClassifierCV}. The 26 probabilities are sorted and the first \texttt{top\_k} are returned.
+\end{enumerate}
+
+All paths come from \texttt{configs/app.yaml}. The two models are loaded once when the predictor is created and reused for every image; a lock allows only one MediaPipe call at a time. If MediaPipe finds no hand, or the landmarks are not finite or have zero hand size, the predictor raises \texttt{NoHandDetected}. We chose an exception over an empty list or a guess so that the application cannot mistake ``no answer'' for an answer. A second function, \texttt{draw\_landmarks}, draws the 21 points and their connections on a copy of the image, and returns nothing when no hand was found.
+
+\textbf{Colour order.} The predictor expects RGB and never converts colours. OpenCV frames are BGR and must be converted by the caller; passing BGR would not raise an error but would change the pixels MediaPipe sees.
+
+\subsection{Reproducing the Saved Results}
+
+We ran the predictor on the 1{,}090 test images whose predictions are saved in \texttt{reports/predictions/landmark\_svm\_test.npz} and compared the 26 probabilities of each image.
+
+\begin{table}[h]
+\centering
+\caption{The predictor compared with the saved test predictions (1{,}090 images).}
+\label{tab:landmark-inference-check}
+\begin{tabular}{lrrr}
+\hline
+Image route & No hand & Top-1 differs & Probability differs by $>0.001$ \\
+\hline
+File path (as in training) & 0 & 0 & 0 \\
+NumPy array (as in the app) & 6 & 6 & 135 \\
+\hline
+\end{tabular}
+\end{table}
+
+When the predictor reads the file with MediaPipe's own reader, as the feature extraction did, it reproduces the saved predictions on every image. The application, however, passes a NumPy array that was decoded with Pillow. In a controlled check, the two decoders gave pixel values that differ by at most about 3 levels (mean about 0.07), and this was enough to change the result: on the array route MediaPipe missed the hand in 6 images, and among the 1{,}084 images where a hand was still found, 6 had a different top-1 letter and 135 had a probability that changed by more than 0.001. We did not change the interface to avoid this, because the application works with arrays. Results from the app can therefore differ slightly from the scores in this report.
+
+\subsection{Limits of Landmark Inference}
+
+\begin{itemize}
+\item \textbf{No hand, no answer.} A hand was found in 69.9\% of the test images (Table~\ref{tab:landmark-detection}). For the other 470 images (30.1\%) the landmark model gives no prediction, whereas the CNN scores 0.983 accuracy on them (Section~\ref{sec:bias-check}). The first Z image of the dataset, \texttt{Z1.jpg}, is one of these cases.
+\item \textbf{Fragile detection.} Detection depends on the image. Blur, occlusion, odd angles and tight crops can make MediaPipe miss the hand, and a tiny change in pixels can be enough, as the array route above shows.
+\item \textbf{One hand, one frame.} The predictor runs in image mode on one hand per image. It cannot use motion, so the letters J and Z, which are signed with a movement, cannot be captured by a single frame (Section~\ref{sec:limitations}).
+\item \textbf{Silent colour errors.} Because the predictor does not convert colours, a BGR frame from OpenCV gives wrong landmarks without an error message.
+\item \textbf{Optimistic scores.} The scores of the model are optimistic for the reasons given in Section~\ref{sec:limitations}, and they describe American Sign Language only.
+\item \textbf{Linux deployment.} MediaPipe needs the system libraries \texttt{libegl1} and \texttt{libgles2}; our continuous-integration run failed until they were installed.
+\end{itemize}

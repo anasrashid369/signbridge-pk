@@ -1,7 +1,7 @@
 \section{Error Analysis}
 \label{sec:error-analysis}
 
-This section studies the mistakes of the CNN on the test split, using \texttt{src/signbridge/evaluation/error\_analysis.py} on \texttt{reports/predictions/cnn\_test.npz}. The CNN made 32 mistakes on the 1{,}560 test images (2.05\%). With so few mistakes, every count below is small, and one image changes a per-letter recall by 1.7 percentage points. The patterns are therefore observations, not firm findings. The landmark models are not part of this section.
+This section studies the mistakes of the CNN on the test split, using \texttt{src/signbridge/evaluation/error\_analysis.py} on \texttt{reports/predictions/cnn\_test.npz}. The CNN made 32 mistakes on the 1{,}560 test images (2.05\%). With so few mistakes, every count below is small, and one image changes a per-letter recall by 1.7 percentage points. The patterns are therefore observations, not firm findings. The landmark models appear only in the sample predictions near the end of this section; their scores are in Section~\ref{sec:results}.
 
 \subsection{Which Letters Are Confused}
 
@@ -41,9 +41,17 @@ Figure~\ref{fig:cnn-misclassified} shows the 12 test images that the CNN got wro
 
 \safefigure{cnn_test_misclassified.png}{The 12 test images the CNN misclassified with the highest confidence (ASL baseline). Titles give the true letter, the predicted letter and the CNN's probability for its prediction.}{fig:cnn-misclassified}
 
+\subsection{Sample Predictions of the CNN and the SVM}
+
+Figure~\ref{fig:sample-predictions} shows test images drawn at random, with a fixed seed, from the 1{,}090 images that both the CNN and the SVM predicted: six that each model got right and six that each got wrong. The images were not chosen by hand, so the figure is a sample and not a best case or a worst case. Each title gives the true letter, the predicted letter and the probability the model gave to its answer. The list of the images shown is in \texttt{reports/figures/sample\_predictions.csv}.
+
+\safefigure{sample_predictions.png}{Sample test predictions of the CNN and the SVM on the 1{,}090 images both models predicted (ASL baseline). Random draw with a fixed seed; titles give the true letter, the predicted letter and the model's probability.}{fig:sample-predictions}
+
+Over all 1{,}090 images the two models differ in how sure they are when they are wrong. The CNN's median probability is 0.885 on its right answers and 0.374 on its wrong ones, and none of its 24 wrong answers has a probability of 0.8 or more. The SVM's median is 0.842 on its right answers and 0.749 on its wrong ones, and 12 of its 34 wrong answers have a probability of 0.8 or more. We read this with care. The two models compute their probabilities differently, and we did not check how well either is calibrated, so we do not conclude that one model knows better when it is wrong. In the figure, several of the wrong examples show closed fists, the group of hand shapes with the weakest letters in this section, and a few show strong backlight; this is an impression from 24 images and not a measured result.
+
 \subsection{Limits of this Analysis}
 \begin{itemize}
   \item Only 32 mistakes are available, and the test split was used once, so we did not look for further patterns by trying more cuts of the data.
   \item The test images share look-alike frames with the training images (Section~\ref{sec:limitations}), so the mistakes are those of an easier test than a new signer would present. The mistakes we see are probably not the mistakes a new person would trigger.
-  \item The analysis covers the CNN only. The effect of a missing hand detection on the CNN is in Section~\ref{sec:bias-check}.
+  \item The tables and the confusion analysis cover the CNN only; only the sample predictions include the SVM. The effect of a missing hand detection on the CNN is in Section~\ref{sec:bias-check}.
 \end{itemize}
