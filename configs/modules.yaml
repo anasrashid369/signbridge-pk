@@ -18,6 +18,7 @@ modules:
       - .mailmap
       - pyproject.toml
       - requirements.txt
+      - requirements-core.txt
       - requirements-dev.txt
       - requirements-ml.txt
       - src/signbridge/__init__.py
@@ -57,6 +58,11 @@ modules:
       - reports/figures/landmark_detection_by_split.csv
       - reports/figures/detection_rate_per_class.csv
       - reports/figures/detection_rate_per_class.png
+      - src/signbridge/inference/landmark_predictor.py
+      - src/signbridge/inference/overlay.py
+      - tests/test_landmark_predictor.py
+      - tests/test_overlay.py
+      - docs/report/sections/landmark_inference.tex
 
   labels_and_images:
     owner: Fatima
@@ -82,6 +88,10 @@ modules:
     owner: Aliza
     paths:
       - src/signbridge/evaluation/**
+      - src/signbridge/evaluation/sample_predictions.py
+      - tests/test_sample_predictions.py
+      - reports/figures/sample_predictions.csv
+      - reports/figures/sample_predictions.png
       - reports/metrics/cnn_*
       - reports/metrics/landmark_*_test_common_*
       - reports/bias/**
@@ -129,6 +139,23 @@ modules:
     owner: Anas
     paths:
       - src/signbridge/tune_cnn.py
+
+  inference:
+    owner: Anas
+    paths:
+      - src/signbridge/inference/**
+      - src/signbridge/app_config.py
+      - src/signbridge/app_service.py
+      - src/signbridge/predict.py
+      - app/**
+      - configs/app.yaml
+      - tests/test_app.py
+      - tests/test_app_config.py
+      - tests/test_app_service.py
+      - tests/test_predict.py
+      - tests/test_cnn_predictor.py
+      - tests/test_inference_interface.py
+      - docs/report/sections/inference_app.tex
 
   tools:
     owner: Anas
