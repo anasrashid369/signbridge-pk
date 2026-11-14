@@ -1,0 +1,51 @@
+\section{Deployment and Local Operation}
+\label{sec:deployment}
+
+The application is deployed locally. There is no hosted instance, no public link and no server deployment: a person who wants to use it runs it on their own machine. This is a deliberate limit, not a missing step. The models were trained on a public ASL dataset and the app is a demonstration, so putting a public endpoint on it would invite use on real signers before the PSL data, the signer-wise split and the field testing exist. The three screenshots in this section are safe figure slots: each one becomes a real screenshot when the image file is added to \texttt{reports/figures/}, and until then the report prints a red placeholder that names the missing file (owner: Anas).
+
+\subsection{What a User Needs}
+
+\begin{itemize}
+\item Python 3.11.
+\item The application requirements: \texttt{pip install -r requirements.txt} installs the shared pins, the CPU builds of PyTorch and torchvision, and Gradio. \texttt{pip install -e .} installs the package itself.
+\item The model files, which are not in Git because they are binary: \texttt{models/cnn\_best.pt}, the three files in \texttt{models/landmark/} and \texttt{models/hand\_landmarker.task}. The README section ``Model weights'' gives the download links and the exact destinations.
+\item A machine with a browser. No GPU is required; the CNN and the landmark models run on the CPU.
+\end{itemize}
+
+The whole application is one command from the repository root:
+
+\begin{verbatim}
+python app/app.py
+\end{verbatim}
+
+The server binds to \texttt{127.0.0.1} on port 7860, so it is reachable only from the same machine. The setting is in \texttt{configs/app.yaml} under \texttt{server}, together with \texttt{share: false}; the app never calls the public-link option. Changing the host to \texttt{0.0.0.0} would expose the app on the local network, and that is outside the scope of this project.
+
+\subsection{Startup and Failure Behaviour}
+
+The predictors are built on first use and cached, so the first prediction after a start is slower than the rest; the CNN loads its checkpoint once and the landmark predictor loads MediaPipe once. The app does not pre-load both models at start, so a user who only needs the CNN does not pay for MediaPipe.
+
+Every failure becomes one readable line instead of a traceback:
+
+\begin{itemize}
+\item an upload above 20 MiB is refused by Gradio's upload limit (\texttt{max\_file\_size} from the settings) before the app sees it, and an image with a side above 4000 pixels is refused by \texttt{load\_rgb\_array}; neither is shrunk, because a resize would change what the model sees. The command-line tool reports the same two limits as \texttt{InvalidImage} errors;
+\item a file that is not an image is refused by the uploader, and the server stays up; the command-line tool prints ``Could not read the image file'';
+\item a missing checkpoint or a missing landmark file produces a \texttt{ModelNotFound} message that points to the README;
+\item the landmark model on an image with no visible hand produces ``No hand detected: the landmark model needs a visible hand. Switch to the CNN, which does not need one.'';
+\item a missing optional module produces a \texttt{PredictorUnavailable} message, and the rest of the interface still works.
+\end{itemize}
+
+The same checks live in the command-line tool, which reads the same \texttt{configs/app.yaml}, so the two entry points cannot drift apart.
+
+\subsection{Screenshots}
+
+The three slots below read their image from \texttt{reports/figures/} (owner: Anas). Until a file exists, the report prints a red placeholder that names the missing file, so the compiled PDF never hides a missing screenshot.
+
+\safefigure{app_upload.png}{The upload panel with a CNN prediction: the chosen image, the model selector, the number of predictions and the probability table. The model selector is set to \texttt{cnn}.}{fig:app-upload}
+
+\safefigure{app_landmark_overlay.png}{The landmark mode on \texttt{A/A1.jpg}, where the SVM returns A with probability 0.853: the 21-point skeleton drawn over the upload and the top-3 letters.}{fig:app-landmark-overlay}
+
+\safefigure{app_both_models.png}{The two models side by side on one image with the \texttt{both} setting, so a reader can compare the CNN and the landmark answer directly.}{fig:app-both-models}
+
+\subsection{Why There Is No Hosted Version}
+
+Hosting would add three problems that this project cannot answer yet. First, a public endpoint would need a privacy notice and a retention policy for the images people upload, and the project has neither. Second, the models are trained on ASL with near-duplicate leakage between the splits (Section~\ref{sec:limitations}), so a public demo would present optimistic scores as if they were field accuracy. Third, the PSL data does not exist yet, so a hosted app would still answer in ASL while carrying a PSL name. Running locally keeps the claim small and true: a demonstration of two trained models on one machine, with the limits printed on screen.

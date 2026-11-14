@@ -64,9 +64,13 @@
 \end{titlepage}
 
 \pagenumbering{roman}
+\input{sections/abstract}
 \tableofcontents
 \clearpage
 \pagenumbering{arabic}
+
+\input{sections/introduction}
+\input{sections/related_work}
 
 \part{Deliverable 1: Problem Definition and Data Acquisition}
 
@@ -82,17 +86,20 @@
 \part{Deliverable 2: Models, Training and Evaluation}
 
 \input{sections/phase3_cnn}
-\input{sections/phase3_landmark}
-\input{sections/landmark_inference}
 \input{sections/cnn_hyperparameters}
+\input{sections/phase3_landmark}
 \input{sections/landmark_hyperparameters}
+\input{sections/landmark_inference}
 \input{sections/validation_strategy}
 \input{sections/metric_analysis}
 \input{sections/results}
 \input{sections/error_analysis}
 \input{sections/bias_check}
+\input{sections/inference_app}
+\input{sections/deployment}
 \input{sections/limitations}
 \input{sections/contributions}
+\input{sections/conclusion}
 
 \bibliographystyle{plain}
 \begingroup
