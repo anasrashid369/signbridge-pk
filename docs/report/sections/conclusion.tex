@@ -1,0 +1,27 @@
+\section{Conclusion and Future Work}
+\label{sec:conclusion}
+
+\subsection{What We Did}
+
+We built and evaluated two recognisers for the 26 letters A to Z: a MobileNetV2 CNN and landmark models that classify 21 MediaPipe hand points. The data was split by groups of look-alike images (10{,}400 images, 280 train, 60 validation and 60 test per letter). On the 1{,}560 test images the CNN scored 0.9795 accuracy and 0.9795 macro-F1. The landmark models answered the 1{,}090 test images (69.9\%) in which a hand was detected. On those images the CNN scored 0.9780 accuracy and the SVM, the landmark model chosen by the validation rule, 0.9688. The SVM and the MLP differ by less than one validation image, so we cannot tell them apart.
+
+\subsection{What the Results Do Not Show}
+
+\begin{itemize}
+  \item \textbf{They are about ASL, not PSL.} We trained on the ASL alphabet because we had no PSL photographs. No score here says anything about PSL.
+  \item \textbf{They are optimistic.} 70.0\% of test images have a training image of the same letter within 8 bits of the image hash. The data has no signer labels, so we cannot say whether the same people appear in training and test. The scores are not an estimate of accuracy on new signers.
+  \item \textbf{They are not a claim of robustness or fairness.} We found no clear difference by blur or hand detection and a small pattern by brightness. The dataset has no demographic labels, so we say nothing about skin tone, gender or signer.
+  \item \textbf{The comparison is narrow.} The CNN is ahead of the SVM by 10 images out of 1{,}090. We ran no significance test, and the landmark models cannot answer the 30.1\% of test images with no detected hand.
+\end{itemize}
+
+\subsection{Future Work}
+
+These are the steps we think would make the work meaningful. We have not started any of them.
+\begin{enumerate}
+  \item \textbf{Collect PSL photographs with signer labels.} Photograph PSL signers with their consent and record a signer identifier for every image, after a PSL user has confirmed the letter set (34 to 37 letters are reported in the sources we cite).
+  \item \textbf{Split by person.} With signer labels, split by signer so that no person appears in more than one split. This is the only way to estimate accuracy on new people.
+  \item \textbf{Check an existing PSL dataset.} UAlpha40 is a candidate. Its folder structure, subject identifiers and suitability have not been checked, and we used it for no result.
+  \item \textbf{Measure uncertainty properly.} Our bootstrap intervals resample images, not groups, so they are too narrow. Resampling signers or groups would give honest intervals.
+  \item \textbf{Assess fairness only with consent.} If participants agree to share attributes such as age or skin tone, check whether accuracy differs between groups. We cannot do this without such labels.
+  \item \textbf{Go beyond single letters.} Letters that need motion, words and sentences need video and much more data, and are outside the scope of this project.
+\end{enumerate}

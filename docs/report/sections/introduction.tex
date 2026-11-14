@@ -1,0 +1,29 @@
+\section{Introduction}
+\label{sec:introduction}
+
+People who communicate in Pakistan Sign Language (PSL) and people who do not know it often cannot talk to each other without an interpreter, pen and paper, or improvised gestures (Section~\ref{sec:problem}). SignBridge PK is a student project that takes a first, deliberately small step towards a tool that helps: given one photograph of one hand, it returns the most likely letter and how confident it is. Letters are the natural first target because fingerspelling is used for names, addresses and technical terms, which are exactly the words that improvised gestures cannot carry~\cite{pslcfrt}.
+
+\subsection{What This Report Covers}
+
+The project has three deliverables, and the report is organised by them.
+\begin{itemize}
+  \item \textbf{Deliverable 1} defines the problem, the intended users and the data, and cleans and explores the image data (Sections~\ref{sec:problem} to~\ref{sec:eda}).
+  \item \textbf{Deliverable 2} builds two recognisers, splits the data so that the test set is a fair test, and evaluates them (Sections~\ref{sec:cnn} to~\ref{sec:limitations}).
+  \item \textbf{Deliverable 3} applies the trained models to new images in an application, and adds sample predictions, a small user test and the conclusion.
+\end{itemize}
+
+\subsection{An Important Limit: ASL, Not PSL}
+
+We have collected no PSL photographs. The only large labelled alphabet dataset available to us is the American Sign Language (ASL) alphabet dataset~\cite{asl_alphabet_kaggle}, and ASL and PSL are different sign languages with different hand shapes. We therefore used ASL as a practice set to build and compare the whole pipeline. Every score in this report describes ASL. None of it shows how well a model would recognise PSL.
+
+\subsection{What We Built}
+
+\begin{itemize}
+  \item \textbf{Two recognisers.} A convolutional network based on MobileNetV2 reads the pixels of the image (Section~\ref{sec:cnn}). A second family first finds 21 hand landmarks with MediaPipe and then classifies them with a support vector machine, a random forest or a small neural network (Section~\ref{sec:landmark-models}). The landmark models answer only when a hand is detected.
+  \item \textbf{A fair split.} The ASL images are video frames, so a random split would place almost identical frames in training and test. We split by groups of look-alike images (Section~\ref{sec:validation}).
+  \item \textbf{Honest evaluation.} We report accuracy, macro-F1, AUC-ROC and the confusion matrix, compare the two families on the same images, analyse the mistakes and check how the CNN behaves by image brightness, blur and hand detection (Sections~\ref{sec:metrics} to~\ref{sec:bias-check}).
+\end{itemize}
+
+\subsection{What the Results Do and Do Not Show}
+
+The CNN scores close to 100\% on our test set. We do not read this as success. Many test images have a near-identical training image of the same letter, and the dataset has no signer labels, so the scores are optimistic and are not an estimate of accuracy on new people (Sections~\ref{sec:read-scores} and~\ref{sec:limitations}). The report states these limits wherever a score is given.

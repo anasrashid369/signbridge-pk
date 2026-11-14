@@ -1,0 +1,20 @@
+\section{Related Work}
+\label{sec:related-work}
+
+This section is short on purpose. It covers only the sources we have read and cited in this report, and it does not claim a survey of the field. We did not reproduce any of these works, and we do not compare their scores with ours, because they use different data and evaluation protocols.
+
+\subsection{PSL Data}
+
+Public PSL data is limited~\cite{colorglove_psl}, and the datasets we found differ in what they contain. One captured 40 images for each hand configuration of the Urdu alphabet~\cite{imran2021psl}. UAlpha40 contains 36 static signs as JPG images and 4 dynamic signs as MP4 videos, under a CC BY 4.0 licence~\cite{sajid2025ualpha40}. A Kaggle dataset holds 37 Urdu alphabet signs performed by 9 non-expert subjects~\cite{butt_psl_kaggle}. PSL-CFRT is a benchmark multi-view dataset for continuous fingerspelling recognition and translation~\cite{pslcfrt}. The sources disagree on the number of letters, from 34 to 37, and we have not verified a letter list of our own (Section~\ref{sec:problem}).
+
+\subsection{PSL Recognition}
+
+Published PSL work includes automatic recognition of the hand configurations of the Urdu alphabet through machine learning~\cite{imran2021psl} and recognition of PSL alphabets from geometrical features with the help of a coloured glove~\cite{colorglove_psl}. Our landmark models are related in spirit to the geometrical-feature approach, since they classify the positions of hand points instead of the pixels; they need no glove, because MediaPipe finds the landmarks in an ordinary photograph. We note this only as a similarity of idea. We did not compare the two methods.
+
+\subsection{ASL Baseline}
+
+Because no large PSL set was available to us, we trained on the ASL Alphabet dataset on Kaggle~\cite{asl_alphabet_kaggle}, published under the GPL~2 licence. It is the most accessible large alphabet dataset we found, and it is made of frames from short recordings with no signer labels. This is why the split in Section~\ref{sec:validation} groups look-alike images, and why our scores are optimistic.
+
+\subsection{What We Add}
+
+Our contribution is not a new method. It is a careful, honest evaluation of two standard recognisers: a split that is aware of near-duplicate frames, a comparison on the same images, an analysis of the mistakes, and a plain statement of what the scores do not show. We make no claim about PSL.
