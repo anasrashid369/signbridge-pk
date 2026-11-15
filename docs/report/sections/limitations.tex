@@ -27,6 +27,14 @@ The long runs were done on a free cloud T4 GPU, not on the project laptop. The t
 
 The system classifies a single image of one hand. It does not use motion, temporal information, two-handed signs, words or sentences, and it does not translate between PSL and text or speech. Letters that require movement are outside its scope.
 
+\subsection{The CNN Always Gives an Answer}
+
+The CNN is a 26-way classifier: it returns a probability for each letter and has no class for ``no hand''. It therefore answers every picture it is given. In an informal check before the user test --- twelve pictures taken by two people in one room, one picture per case, not a measurement and not part of any score in this report --- four pictures with no hand at all (a face, a wall and bed frame, party decorations, and a face partly covered by a hand) each received a letter from the CNN, once with a probability of 0.867, while the landmark model returned no hand in all four. This is not the same as the 0.983 accuracy reported for images in which MediaPipe found no hand (Section~\ref{sec:bias-check}): in those images a hand is present and the landmarker missed it, so they say nothing about a picture with no hand in it.
+
+The landmark model's refusal is not a reliable hand detector either. In the same check it returned no hand for the picture in which a hand covered a face, although a hand was there. That is the detection limit already measured on the test set, where a hand was found in 69.9\% of the images (Table~\ref{tab:landmark-detection}).
+
+A high probability is not a sign that the answer is right. In the same check, of the six pictures that showed a chart letter, each model's top answer was correct in one picture; the letter A, shown twice by two different hands, was outside both models' top three both times; one picture had the correct letter in second place, 0.0002 behind the first; and the landmark model gave 0.904 to a wrong letter. The letter L, shown by two hands, was read correctly by a different model each time. We do not turn these observations into rates, and the app does not add a confidence threshold: choosing one would need calibrated probabilities from more than twelve pictures, and a threshold would hide a wrong answer rather than remove it. A rejection option for the CNN would need a separate hand detector or a calibrated score and is left to later work. The no-hand message in the app therefore belongs to the landmark model, which is the only one that can refuse.
+
 \subsection{No Demographic Bias Assessment}
 
 The dataset has no demographic labels, and no PSL volunteers were photographed. It is therefore not possible to measure whether the recogniser performs differently across age, gender, skin tone or signing background. The bias discussion in this report is limited to what can be measured without those labels, such as performance by letter and by image brightness or blur, and it cannot support a claim of fairness.
