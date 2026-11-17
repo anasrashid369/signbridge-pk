@@ -40,11 +40,15 @@ The same checks live in the command-line tool, which reads the same \texttt{conf
 
 The three slots below read their image from \texttt{reports/figures/} (owner: Anas). Until a file exists, the report prints a red placeholder that names the missing file, so the compiled PDF never hides a missing screenshot.
 
-\safefigure{app_upload.png}{The upload panel with a CNN prediction: the chosen image, the model selector, the number of predictions and the probability table. The model selector is set to \texttt{cnn}.}{fig:app-upload}
+\safefigure{screenshot_upload.png}{The upload panel with a CNN prediction: the chosen image, the model selector, the number of predictions and the probability table. The model selector is set to \texttt{cnn}.}{fig:app-upload}
 
-\safefigure{app_landmark_overlay.png}{The landmark mode on \texttt{A/A1.jpg}, where the SVM returns A with probability 0.853: the 21-point skeleton drawn over the upload and the top-3 letters.}{fig:app-landmark-overlay}
+\safefigure{screenshot_both_models.png}{The \texttt{both} setting on \texttt{A/A1.jpg}: the CNN returns A (0.811) and the landmark SVM A (0.853), with the 21-point skeleton drawn over the image, so a reader can compare the two answers directly.}{fig:app-both-models}
 
-\safefigure{app_both_models.png}{The two models side by side on one image with the \texttt{both} setting, so a reader can compare the CNN and the landmark answer directly.}{fig:app-both-models}
+\safefigure{screenshot_no_hand.png}{The landmark mode on an image with no visible hand: the result line says that the landmark model needs a visible hand and points to the CNN, and the three honesty notes stay visible.}{fig:app-no-hand}
+
+\subsection{Privacy and Image Handling}
+
+The app is local, and the models run on the same machine: no image is sent to a remote server for prediction. Gradio still writes an uploaded file to its temporary folder before the app reads it; on Windows this is under \texttt{\%TEMP\%\textbackslash gradio}, one folder per file named after the file's content hash. The app does not set \texttt{delete\_cache}, so those copies are not removed when the server stops. In a check on this machine, eleven folders from earlier sessions were still present. On a shared computer a user should clear that folder after a session. The app keeps no account, database or prediction log, but it also has no privacy notice and no retention period, which is one more reason not to host it.
 
 \subsection{Why There Is No Hosted Version}
 
