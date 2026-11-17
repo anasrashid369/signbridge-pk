@@ -3,17 +3,17 @@
 
 \subsection{The Data Is American Sign Language}
 
-The only large labelled dataset available to the project is the ASL Alphabet dataset. Every reported result in Deliverable~2 therefore describes American Sign Language, not Pakistan Sign Language. The two are different sign languages with different hand shapes, so the trained CNN cannot be used as a PSL recogniser and its scores do not transfer to PSL. The ASL baseline is used to build, train and compare the pipeline, not to make a claim about PSL accuracy.
+The only large labelled dataset available to the project is the ASL Alphabet dataset. Every reported result in this report therefore describes American Sign Language, not Pakistan Sign Language. The two are different sign languages with different hand shapes, so the trained CNN cannot be used as a PSL recogniser and its scores do not transfer to PSL. The ASL baseline is used to build, train and compare the pipeline, not to make a claim about PSL accuracy.
 
 \subsection{No PSL Photographs}
 
-At the time of writing the team has collected 0 PSL photographs from 0 volunteers. The PSL letter set is also not final: published sources report 34 to 37 letters, and the current label map contains the 26 ASL letters A to Z. A PSL model, a PSL test set and any statement about PSL performance are therefore outside what this deliverable can show.
+At the time of writing the team has collected 0 PSL photographs from 0 volunteers. The PSL letter set is also not final: published sources report 34 to 37 letters, and the current label map contains the 26 ASL letters A to Z. A PSL model, a PSL test set and any statement about PSL performance are therefore outside what this report can show.
 
 \subsection{A Subset of the Available Images}
 
 Training does not use all 87{,}000 images of the ASL baseline. The shared split uses 400 cleaned images per class (10{,}400 in total, 7{,}280 in train, 280 per class in train) chosen by the data lead, and no per-class cap is applied at training time. This keeps tuning and final training feasible on the available hardware, but it reduces the variety the model sees and makes the results depend on which images were kept.
 
-An existing PSL image dataset, UAlpha40 (CC BY 4.0, 36 static signs), is a candidate for PSL work in later deliverables; its folder structure and subject IDs have not been checked, and it was not used for any result in this report.
+An existing PSL image dataset, UAlpha40 (CC BY 4.0, 36 static signs), is a candidate for PSL work later; its folder structure and subject IDs have not been checked, and it was not used for any result in this report.
 
 \subsection{Frames and Signers Are Not Independent}
 

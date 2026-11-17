@@ -1,7 +1,7 @@
 \section{Challenges Faced}
 \label{sec:challenges}
 
-This section records problems the team actually ran into while setting up the repository and the data pipeline for Deliverable 1, how each was handled, and what we took from it.
+This section records problems the team actually ran into while setting up the repository and the data pipeline, how each was handled, and what we took from it.
 
 \subsection{Ignore Rules Blocked Files We Needed}
 
@@ -23,7 +23,7 @@ This section records problems the team actually ran into while setting up the re
 
 \textbf{What happened.} The first README told readers to start a web app with \texttt{python app/app.py} on port 7860. No app existed yet.
 
-\textbf{How we fixed it.} We rewrote the README to describe only what exists: the problem, the folder layout, setup steps and the scripts that are present. Planned features are listed separately under ``Coming in Later Deliverables''. The rewrite was committed only after the scripts it describes were on the main branch.
+\textbf{How we fixed it.} We rewrote the README to describe only what exists: the problem, the folder layout, setup steps and the scripts that are present. Planned features are listed separately under a heading for later work. The rewrite was committed only after the scripts it describes were on the main branch.
 
 \textbf{What we learned.} Documentation should change in step with the code. Instructions that do not work cost a reader more time than missing instructions.
 
@@ -35,9 +35,9 @@ This section records problems the team actually ran into while setting up the re
 
 \subsection{A Slow and Misleading CI Pipeline}
 
-\textbf{What happened.} The first continuous integration (CI) run installed every dependency, including large packages that Deliverable 1 does not use. It took 1 minute 38 seconds and failed, because no tests existed yet and \texttt{pytest} treats ``no tests collected'' as a failure.
+\textbf{What happened.} The first continuous integration (CI) run installed every dependency, including large packages that the data pipeline does not use. It took 1 minute 38 seconds and failed, because no tests existed yet and \texttt{pytest} treats ``no tests collected'' as a failure.
 
-\textbf{How we fixed it.} We split the dependencies into three files: one for the Deliverable 1 runtime, one for test and lint tools, and one for packages needed only in later deliverables. CI installs only the first two and caches downloaded packages between runs. We also added a first test that imports the package. The next CI runs passed in 36 to 43 seconds.
+\textbf{How we fixed it.} We split the dependencies into three files: one for the data-pipeline runtime, one for test and lint tools, and one for packages needed only by the later models. CI installs only the first two and caches downloaded packages between runs. We also added a first test that imports the package. The next CI runs passed in 36 to 43 seconds.
 
 \textbf{What we learned.} A passing pipeline only means something if it runs real checks, and CI should install what the current stage needs, not everything the project will ever use.
 
@@ -85,7 +85,7 @@ This section records problems the team actually ran into while setting up the re
 
 \textbf{What happened.} To decide which PSL letters to collect, we looked for an agreed list. Published PSL work reports different numbers of letter signs: 36 static signs~\cite{sajid2025ualpha40}, 34 static alphabets~\cite{colorglove_psl} and 37 alphabet signs~\cite{butt_psl_kaggle}. The figures found so far therefore place the set at 34 to 37 letters.
 
-\textbf{How we handled it.} We did not guess a list. The letter set will be fixed in Deliverable~2 from a cited source and checked with a PSL user, before any PSL photos are collected. Until then the label map contains the 26 letters A to Z, which fit only the ASL baseline.
+\textbf{How we handled it.} We did not guess a list. The letter set will be fixed later from a cited source and checked with a PSL user, before any PSL photos are collected. Until then the label map contains the 26 letters A to Z, which fit only the ASL baseline.
 
 \textbf{Still open.} The letter set, and therefore the number of PSL classes, is not decided yet.
 
@@ -112,7 +112,7 @@ This section records problems the team actually ran into while setting up the re
 
 \textbf{What happened.} The first version of \texttt{requirements-ml.txt} pinned Gradio together with the training stack. Gradio pulled in a Pillow version that conflicted with the pinned Pillow 13.0.0, so a clean install did not resolve.
 
-\textbf{How we fixed it.} Gradio was removed from \texttt{requirements-ml.txt}; it returns with the Deliverable~3 app. The remaining file installs the Deliverable~1 runtime plus the pinned CPU builds of PyTorch and torchvision, and \texttt{pip install -r requirements-ml.txt} was checked in a fresh virtual environment.
+\textbf{How we fixed it.} Gradio was removed from \texttt{requirements-ml.txt}; it returns with the app. The remaining file installs the data-pipeline runtime plus the pinned CPU builds of PyTorch and torchvision, and \texttt{pip install -r requirements-ml.txt} was checked in a fresh virtual environment.
 
 \subsection{The CPU Wheel Pin on a GPU Runtime}
 \label{sec:challenge-cpu-pin}
