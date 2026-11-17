@@ -10,7 +10,7 @@ The CNN reads a whole image, while the landmark model first finds a hand and the
 \begin{itemize}
 \item \texttt{Prediction(label, probability)} is an immutable dataclass. A prediction is a value, not a row in a table, so the command-line tool and the app format the same object.
 \item \texttt{Predictor} is a \texttt{Protocol} with a \texttt{name} and one method, \texttt{predict(image, top\_k=3)}. The image is a \texttt{uint8} RGB array of shape (height, width, 3). The probabilities are computed over all 26 classes, sum to 1 before the list is truncated, and the returned list is sorted from highest to lowest. This is the same order that the saved prediction files use.
-\item Four errors say what went wrong: \texttt{InvalidImage} for an unusable upload, \texttt{NoHandDetected} when the landmark model finds no hand, \texttt{ModelNotFound} for missing weights, and \texttt{PredictorUnavailable} when a predictor is not installed.
+\item Four errors say what went wrong: \texttt{InvalidImage} for an unusable upload, \texttt{NoHandDetected} when no hand is found, \texttt{ModelNotFound} for missing weights, and \texttt{PredictorUnavailable} when a predictor is not installed.
 \item \texttt{load\_rgb\_array} is the only way an image enters the system. It accepts a PIL image, a path or an RGB array, applies the EXIF rotation, composites transparency on white, converts grayscale and palette images, and rejects files above 20 MiB, sides above 4000 pixels, unsupported colour modes and non-\texttt{uint8} arrays. Rejecting an image is better than silently resizing it, because a resize would change what the model sees and hide a bad upload.
 \end{itemize}
 
@@ -27,7 +27,8 @@ The checkpoint is read with \texttt{weights\_only=True}. A state dict needs no p
 The same predictor is available without the interface:
 
 \begin{verbatim}
-python -m signbridge.predict --image PATH [--model cnn|landmark|both] [--top-k N]
+python -m signbridge.predict --image PATH [--model cnn|landmark|both]
+    [--top-k N]
 \end{verbatim}
 
 The tool prints a fixed-width table with the rank, the letter and the probability. It exits with code 0 when every requested model answered, and with code 1 when one of them could not: a missing hand, missing weights or a missing module prints one line and, with \texttt{--model both}, the other model still runs. The default model, the number of predictions and the image limits come from \texttt{configs/app.yaml}, so the tool and the app cannot drift apart.
@@ -36,9 +37,41 @@ The tool prints a fixed-width table with the rank, the letter and the probabilit
 
 The app is a Gradio Blocks interface with an upload box and a webcam source, a model selector (CNN, landmark model or both), a slider for the number of predictions, a probability table with one row per model and a panel for the landmark overlay. The three honesty notes shown under the results are read from the settings file rather than written into the layout, so the wording has one home.
 
-The predictors are created on first use and cached, because loading the CNN takes about a second and MediaPipe is heavier still. Every failure becomes one readable line instead of a traceback: an invalid upload, missing weights, no hand, or a predictor that is not installed. The landmark overlay is drawn only in landmark mode and only when the predictor returns landmarks, so the CNN side works without the overlay module.
+The predictors are created on first use and cached, because loading the CNN takes about a second and MediaPipe is heavier still. Every failure becomes one readable line instead of a traceback: an invalid upload, missing weights, no hand, or a predictor that is not installed. The landmark overlay is drawn in landmark mode and in the landmark half of \texttt{both} mode, and only when the predictor returns landmarks, so the CNN side works without the overlay module.
 
 The server binds to \texttt{127.0.0.1} on port 7860 by default, refuses to create a public link, and enforces the same 20 MiB and 4000-pixel limits as the command-line tool. Hosting is out of scope, so there is no Space URL and no server deployment.
+
+Figure~\ref{fig:app-flow} shows the path of one request from the upload box to the result table.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  font=\small,
+  box/.style={draw, rounded corners, align=center, inner sep=4pt, minimum height=9mm},
+  arr/.style={-latex, thick},
+  node distance=6mm and 8mm
+]
+\node[box] (input) {upload or\\webcam image};
+\node[box, right=of input] (load) {\texttt{load\_rgb\_array}\\limits and mode checks};
+\node[box, right=of load] (select) {model selector};
+\node[box, above right=6mm and 10mm of select] (cnn) {CNN predictor\\MobileNetV2};
+\node[box, below right=6mm and 10mm of select] (lm) {landmark predictor\\MediaPipe + SVM};
+\node[box, right=10mm of cnn] (table) {probability table\\top $k$ per model};
+\node[box, right=10mm of lm] (overlay) {skeleton overlay\\landmark mode only};
+\draw[arr] (input) -- (load);
+\draw[arr] (load) -- (select);
+\draw[arr] (select.east) -- ++(5mm,0) coordinate (split);
+\draw[arr] (split) |- (cnn.west);
+\draw[arr] (split) |- (lm.west);
+\draw[arr] (cnn) -- (table);
+\draw[arr] (lm) -- (overlay);
+\draw[arr, dashed] (lm.north) -- (table.south west);
+\end{tikzpicture}%
+}
+\caption{The path of one request through the local app. The model selector decides which branches run; in \texttt{both} mode both run and the result table holds one block per model. The three honesty notes under the table are read from \texttt{configs/app.yaml}, and no image leaves the machine.}
+\label{fig:app-flow}
+\end{figure}
 
 \subsection{What the Demo Shows and What It Does Not}
 

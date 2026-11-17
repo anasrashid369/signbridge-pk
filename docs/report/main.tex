@@ -41,18 +41,24 @@
 
 \begin{document}
 
+% Long \texttt paths cannot be hyphenated; let the spaces stretch instead of
+% running into the margin.
+\setlength{\emergencystretch}{6em}
+
 \pagenumbering{alph}
 \begin{titlepage}
   \centering
   \vspace*{3cm}
   {\Huge\bfseries SignBridge PK\par}
   \vspace{0.8cm}
-  {\Large Real-time Pakistan Sign Language Alphabet Recognizer\par}
-  \vspace{1.5cm}
-  {\large Deliverable 1: Problem Definition and Data Acquisition\par}
+  {\Large Static Letter Recognition in American Sign Language\par}
   \vspace{0.3cm}
-  {\large Deliverable 2: Models, Training and Evaluation\par}
-  \vspace{2.5cm}
+  {\large A first step towards Pakistan Sign Language\par}
+  \vspace{1.5cm}
+  {\large Project Report\par}
+  \vspace{0.3cm}
+  {\large November 2026\par}
+  \vspace{2.2cm}
   {\large\bfseries Team\par}
   \vspace{0.4cm}
   \begin{tabular}{ll}
@@ -72,7 +78,7 @@
 \input{sections/introduction}
 \input{sections/related_work}
 
-\part{Deliverable 1: Problem Definition and Data Acquisition}
+\part{Problem Definition and Data Acquisition}
 
 \input{sections/problem_statement}
 \input{sections/target_audience}
@@ -83,20 +89,21 @@
 \input{sections/eda}
 \input{sections/challenges}
 
-\part{Deliverable 2: Models, Training and Evaluation}
+\part{Models, Training and Evaluation}
 
+\input{sections/validation_strategy}
 \input{sections/phase3_cnn}
 \input{sections/cnn_hyperparameters}
 \input{sections/phase3_landmark}
 \input{sections/landmark_hyperparameters}
-\input{sections/landmark_inference}
-\input{sections/validation_strategy}
 \input{sections/metric_analysis}
 \input{sections/results}
 \input{sections/error_analysis}
 \input{sections/bias_check}
 \input{sections/inference_app}
+\input{sections/landmark_inference}
 \input{sections/deployment}
+\input{sections/user_test}
 \input{sections/limitations}
 \input{sections/contributions}
 \input{sections/conclusion}
