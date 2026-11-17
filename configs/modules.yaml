@@ -32,6 +32,7 @@ modules:
     owner: Aliza
     paths:
       - docs/data_collection_protocol.md
+      - docs/report/sections/data_collection.tex
 
   download:
     owner: Anas
@@ -42,11 +43,13 @@ modules:
     owner: Aliza
     paths:
       - data_scripts/clean/**
+      - docs/report/sections/data_cleaning.tex
 
   raw_eda:
     owner: Aliza
     paths:
       - data_scripts/eda/raw_data_eda.py
+      - docs/report/sections/eda.tex
 
   landmarks:
     owner: Fatima
@@ -83,6 +86,7 @@ modules:
       - data_scripts/build_split_pool.py
       - data/processed/split_v1.csv
       - reports/split_pool_summary.csv
+      - docs/report/sections/validation_strategy.tex
 
   evaluation:
     owner: Aliza
@@ -162,6 +166,20 @@ modules:
     paths:
       - tools/**
       - configs/modules.yaml
+
+  overview:
+    owner: Aliza
+    paths:
+      - docs/report/sections/abstract.tex
+      - docs/report/sections/introduction.tex
+      - docs/report/sections/related_work.tex
+      - docs/report/sections/conclusion.tex
+
+  user_test:
+    owner: Aliza
+    paths:
+      - docs/user_test_plan.md
+      - docs/report/sections/user_test.tex
 
   report:
     owner: Anas
