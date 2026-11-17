@@ -1,6 +1,6 @@
 # SignBridge PK
 
-A recognizer for the static letter signs of Pakistan Sign Language (PSL), built with computer vision and machine learning. It is a learning and practice aid, not a replacement for an interpreter.
+A recognizer for the static letter signs of **American Sign Language (ASL)**, built with computer vision and machine learning. It is a first step towards a Pakistan Sign Language (PSL) version and a learning and practice aid, not a replacement for an interpreter. No PSL photos have been collected yet, so no PSL accuracy is measured or claimed.
 
 ## Problem
 
@@ -39,6 +39,8 @@ python -m signbridge.predict --image PATH/TO/A1.jpg --model both
 The CNN reads the whole image and works without a visible hand. The landmark model first finds 21 hand points and then classifies their normalized coordinates; when it finds a hand, the app also draws the skeleton over the image. **both** shows the two predictions side by side so they can be compared.
 
 An upload larger than 20 MiB or with a side above 4000 pixels is rejected rather than shrunk, because resizing would change what the model sees and hide a bad file. The same limits apply to the command-line tool, and both read them from `configs/app.yaml`. The server binds to `127.0.0.1` and never creates a public link; hosting is out of scope.
+
+Both models receive the decoded image array, not the uploaded file. On the 1,090 test images in the landmark test file, the array route reports no hand on 6 images where MediaPipe's file route returns a letter, and 6 top-1 letters differ, because the two decoders read a JPEG slightly differently. The app keeps the array route so the CNN, the size limits and the skeleton overlay all see the same pixels; the report records the comparison.
 
 ## What the on-screen notice means
 
@@ -167,10 +169,23 @@ pytest
 
 Most tests use only the shared runtime pins. Every test module that needs PyTorch starts with `pytest.importorskip("torch")`, so `pytest` also passes in CI, where torch is not installed. Install `requirements-ml.txt` and run `pytest` locally to include the CNN tests.
 
+Every command in this README has `--help`. These three run without the model files and confirm that the package and the scripts import cleanly:
+
+```bash
+python -m signbridge.predict --help
+python -m data_scripts.clean.clean_images --help
+python -m tools.contribution_table --help
+```
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs `ruff check .` and `pytest` on every push and pull request to `main`, with Python 3.11 and `requirements-dev.txt`. It installs `libegl1` and `libgles2` so MediaPipe imports on the Linux runner. PyTorch and Gradio are not installed there; the tests that need them are skipped, as described above.
+
 ## Data
 
 - **ASL baseline:** [ASL Alphabet](https://www.kaggle.com/datasets/grassknoted/asl-alphabet) (`grassknoted/asl-alphabet`) on Kaggle, licensed GPL 2. Its training folder has 87,000 JPEG images of 200x200 pixels in 29 folders: A-Z plus `del`, `nothing` and `space`. It is American Sign Language, used only to build and test the pipeline. Only the 26 letters are classes; `nothing` images serve as a negative test.
 - **PSL photos:** to be collected by the team from consenting volunteers under `docs/data_collection_protocol.md`. None have been collected yet. They will never be committed.
+- **PSL datasets, not used:** [UAlpha40](https://doi.org/10.17632/3pvnnckxyb.3) covers 40 Urdu-alphabet signs and is licensed CC BY 4.0, but its contents, signer split and label set have not been checked, and no image from it is used. The PSL letter set is still open.
 
 Raw images, the cleaning report and the landmark cache are never committed.
 
@@ -457,3 +472,11 @@ Settings live in `configs/app.yaml`: the four model paths, the default model, th
 
 - Scope is static letter signs only.
 - Deployment is not part of this project; everything runs locally.
+
+## References
+
+- ASL Alphabet dataset, Akash, Kaggle, licensed GPL 2: <https://www.kaggle.com/datasets/grassknoted/asl-alphabet>
+- Sandler et al., "MobileNetV2: Inverted Residuals and Linear Bottlenecks", CVPR 2018.
+- Zhang et al., "MediaPipe Hands: On-device Real-time Hand Tracking", arXiv:2006.10214, 2020.
+- Pedregosa et al., "Scikit-learn: Machine Learning in Python", JMLR 12, 2011.
+- The full bibliography is in `docs/report/references.bib`.

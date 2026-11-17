@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "signbridge-pk"
 version = "0.1.0"
-description = "Real-time Pakistan Sign Language alphabet recognizer"
+description = "Static ASL alphabet recognizer with a local Gradio app"
 readme = "README.md"
 authors = [{ name = "Anas Rashid" }]
 requires-python = ">=3.11"
