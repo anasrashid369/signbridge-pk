@@ -1,7 +1,7 @@
 \section{Deployment and Local Operation}
 \label{sec:deployment}
 
-The application is deployed locally. There is no hosted instance, no public link and no server deployment: a person who wants to use it runs it on their own machine. This is a deliberate limit, not a missing step. The models were trained on a public ASL dataset and the app is a demonstration, so putting a public endpoint on it would invite use on real signers before the PSL data, the signer-wise split and the field testing exist. The three screenshots in this section are safe figure slots: each one becomes a real screenshot when the image file is added to \texttt{reports/figures/}, and until then the report prints a red placeholder that names the missing file (owner: Anas).
+The application is deployed locally. There is no hosted instance, no public link and no server deployment: a person who wants to use it runs it on their own machine. This is a deliberate limit, not a missing step. The models were trained on a public ASL dataset and the app is a demonstration, so putting a public endpoint on it would invite use on real signers before the PSL data, the signer-wise split and the field testing exist. The three screenshots in this section were taken from the running app on this machine and show one prediction per mode.
 
 \subsection{What a User Needs}
 
@@ -38,13 +38,13 @@ The same checks live in the command-line tool, which reads the same \texttt{conf
 
 \subsection{Screenshots}
 
-The three slots below read their image from \texttt{reports/figures/} (owner: Anas). Until a file exists, the report prints a red placeholder that names the missing file, so the compiled PDF never hides a missing screenshot.
+The three figures below are the app's own output, captured from the running application on this machine.
 
-\safefigure{screenshot_upload.png}{The upload panel with a CNN prediction: the chosen image, the model selector, the number of predictions and the probability table. The model selector is set to \texttt{cnn}.}{fig:app-upload}
+\safefigure[\linewidth]{screenshot_upload.jpeg}{A CNN prediction in the app: the chosen image, the model selector set to \texttt{cnn}, the number of predictions and the probability table. The CNN answers A with probability 0.752.}{fig:app-upload}
 
-\safefigure{screenshot_both_models.png}{The \texttt{both} setting on \texttt{A/A1.jpg}: the CNN returns A (0.811) and the landmark SVM A (0.853), with the 21-point skeleton drawn over the image, so a reader can compare the two answers directly.}{fig:app-both-models}
+\safefigure[\linewidth]{screenshot_both_models.jpeg}{The \texttt{both} setting on a webcam image: the CNN answers A (0.918) and the landmark SVM A (0.772), with the 21-point skeleton drawn over the image, so a reader can compare the two answers directly.}{fig:app-both-models}
 
-\safefigure{screenshot_no_hand.png}{The landmark mode on an image with no visible hand: the result line says that the landmark model needs a visible hand and points to the CNN, and the three honesty notes stay visible.}{fig:app-no-hand}
+\safefigure[\linewidth]{screenshot_no_hand.jpeg}{The landmark mode on an image with no hand: the result line says that the landmark model needs a visible hand and points to the CNN, while the prediction table and the overlay stay empty.}{fig:app-no-hand}
 
 \subsection{Privacy and Image Handling}
 
