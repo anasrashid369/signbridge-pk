@@ -27,16 +27,17 @@
   \par\medskip}
 
 % Include a figure from reports/figures/ if it exists, otherwise show a TODO box.
-\newcommand{\safefigure}[3]{%
-  \IfFileExists{\figdir #1}{%
+% Optional first argument: the width (default 0.85\linewidth).
+\newcommand{\safefigure}[4][0.85\linewidth]{%
+  \IfFileExists{\figdir #2}{%
     \begin{figure}[htbp]
       \centering
-      \includegraphics[width=0.85\linewidth]{#1}
-      \caption{#2}
-      \label{#3}
+      \includegraphics[width=#1]{#2}
+      \caption{#3}
+      \label{#4}
     \end{figure}%
   }{%
-    \todobox{Missing figure \texttt{reports/figures/\detokenize{#1}}: #2}%
+    \todobox{Missing figure \texttt{reports/figures/\detokenize{#2}}: #3}%
   }}
 
 \begin{document}
